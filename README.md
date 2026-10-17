@@ -80,3 +80,7 @@ and leaves the rest alone. The API key is never exported. After an import, sync 
 - `options.*`: rules, base filter, fields and display settings
 - `test/harness.html` + `test/chrome-stub.js`: runs the content script with a stubbed
   `chrome` API (`python3 -m http.server` in this folder, then open `/test/harness.html`)
+
+## License
+
+MIT, see [LICENSE](LICENSE).
