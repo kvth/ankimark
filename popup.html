@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body class="popup">
+  <header>
+    <h1>AnkiMark</h1>
+    <span id="conn" class="pill">…</span>
+  </header>
+
+  <p id="error" class="error" hidden></p>
+  <p id="stale" class="notice" hidden>Searches changed since the last sync.</p>
+
+  <section>
+    <div id="rules" class="legend"></div>
+    <div class="row">
+      <button id="sync" class="primary">Sync from Anki</button>
+      <span id="syncInfo" class="hint"></span>
+    </div>
+  </section>
+
+  <section>
+    <label class="check"><input type="checkbox" id="enabled"> Highlight on all pages</label>
+    <label class="check"><input type="checkbox" id="siteOff"> Disable on <b id="host">this site</b></label>
+    <div id="pageStats" class="hint"></div>
+  </section>
+
+  <button id="settings">Rules &amp; settings…</button>
+
+  <script src="config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>AnkiMark harness</title>
+  <link rel="stylesheet" href="../content.css">
+  <script src="chrome-stub.js"></script>
+</head>
+<body>
+  <p>日本語は難しいけど、猫が好きです。昨日パンを食べた。</p>
+  <p>手紙を<b>書いて</b>、書類を書かなかった。<ruby>勉強<rt>べんきょう</rt></ruby>しました。</p>
+  <textarea>日本語 in a textarea is left alone</textarea>
+  <div id="dyn"></div>
+  <script src="../japanese.js"></script>
+  <script src="../config.js"></script>
+  <script src="../content.js"></script>
+  <script>
+    setTimeout(() => { document.getElementById("dyn").textContent = "動的に追加された日本語と猫。"; }, 500);
+  </script>
+</body>
+</html>

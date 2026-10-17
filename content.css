@@ -1,0 +1,16 @@
+span.ankimark {
+  border-radius: 2px;
+  cursor: help;
+  color: inherit;
+}
+
+:root[data-ankimark-style="background"] span.ankimark {
+  background-color: color-mix(in srgb, var(--ankimark-color, #888) var(--ankimark-opacity, 35%), transparent);
+}
+
+:root[data-ankimark-style="underline"] span.ankimark {
+  text-decoration-line: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--ankimark-color, #888);
+}

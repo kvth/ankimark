@@ -1,0 +1,61 @@
+body.options {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  font-size: 14px;
+}
+body.options h1 { font-size: 20px; }
+h2 { font-size: 15px; margin: 6px 0 4px; }
+section { padding: 10px 0 16px; }
+p.hint { margin: 2px 0 8px; }
+code {
+  font: 12px ui-monospace, monospace;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+input[type="text"], input[type="password"] {
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  width: 100%;
+}
+#baseQuery, .rule .query { font-family: ui-monospace, monospace; font-size: 13px; }
+
+.row-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+button.subtle { border-color: transparent; color: var(--muted); }
+
+.rules { display: flex; flex-direction: column; gap: 6px; }
+.rule {
+  display: grid;
+  grid-template-columns: auto auto 34px minmax(90px, 1fr) minmax(160px, 2.4fr) 90px auto;
+  align-items: center;
+  gap: 6px;
+}
+.rule.disabled .name, .rule.disabled .query { opacity: 0.55; }
+.rule .move { display: flex; flex-direction: column; }
+.rule .move button, .rule .del {
+  padding: 0 6px; line-height: 1.1; font-size: 11px; border-color: transparent; color: var(--muted);
+}
+.rule .del { font-size: 14px; }
+.rule input[type="color"] {
+  width: 34px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none;
+}
+.rule .result { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rule .result.bad { color: var(--err-fg); }
+
+.examples { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.examples button { font-size: 12px; padding: 2px 8px; }
+
+.fields { max-height: none; gap: 4px 16px; }
+input[type="range"] { width: 160px; }
+
+@media (max-width: 640px) {
+  .rule { grid-template-columns: auto auto 34px 1fr auto; }
+  .rule .query { grid-column: 3 / -1; }
+  .rule .result { grid-column: 3 / -1; }
+}

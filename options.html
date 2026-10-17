@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>AnkiMark settings</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body class="options">
+  <header>
+    <h1>AnkiMark settings</h1>
+    <span id="conn" class="pill">…</span>
+  </header>
+
+  <p id="error" class="error" hidden></p>
+  <p id="importMsg" class="notice" hidden></p>
+  <div id="stale" class="notice row-notice" hidden>
+    <span id="staleText">Searches or fields changed since the last sync.</span>
+    <button id="syncNow" class="primary">Sync now</button>
+  </div>
+
+  <section>
+    <h2>Base filter</h2>
+    <p class="hint">Put in front of every rule, usually your deck. Any Anki search works, e.g.
+      <code>deck:"Japanese::Vocab" -is:suspended</code>. Leave it empty to search your whole collection.</p>
+    <input type="text" id="baseQuery" list="deckList" spellcheck="false" placeholder='deck:"Japanese"'>
+    <datalist id="deckList"></datalist>
+  </section>
+
+  <section>
+    <h2>Rules</h2>
+    <p class="hint">Each rule is an Anki search plus a colour. A word gets the colour of the <b>first</b> rule
+      (top to bottom) that one of its notes matches. Notes matching no rule aren't highlighted.
+      Card searches like <code>is:due</code> match a note if <i>any</i> of its cards match.</p>
+    <div id="rules" class="rules"></div>
+    <div class="row">
+      <button id="addRule">Add rule</button>
+      <button id="checkRules">Check searches</button>
+      <button id="resetRules" class="subtle">Reset to defaults</button>
+    </div>
+    <div class="examples">
+      <span class="hint">Examples (click to add):</span>
+      <span id="examples"></span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Fields</h2>
+    <p class="hint">Which note fields hold the Japanese word. With none ticked, each note's first field is used.</p>
+    <div id="fields" class="fields"><span class="hint">Click “Load fields” to list the fields of your notes.</span></div>
+    <div class="row"><button id="loadFields">Load fields</button></div>
+  </section>
+
+  <section>
+    <h2>Display</h2>
+    <label class="inline">Style
+      <select id="style">
+        <option value="background">Background</option>
+        <option value="underline">Underline</option>
+      </select>
+    </label>
+    <label class="inline">Background strength
+      <input type="range" id="opacity" min="10" max="80" step="5"> <span id="opacityVal" class="hint"></span>
+    </label>
+    <label class="check"><input type="checkbox" id="conjugations"> Match conjugated forms (食べた → 食べる)</label>
+    <label class="inline">Ignore kana-only words shorter than
+      <input type="number" id="kanaMinLen" min="1" max="10"> characters</label>
+  </section>
+
+  <section>
+    <h2>AnkiConnect</h2>
+    <label for="apiKey">API key (only if you set one in AnkiConnect's config)</label>
+    <input type="password" id="apiKey" autocomplete="off">
+  </section>
+
+  <section>
+    <h2>Backup</h2>
+    <p class="hint">Save your rules and settings as a JSON file, or load them from one.
+      Importing replaces the current settings. The API key is not included.</p>
+    <div class="row">
+      <button id="export">Export settings</button>
+      <button id="import">Import settings…</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+  </section>
+
+  <script src="config.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
