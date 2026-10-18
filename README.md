@@ -57,7 +57,8 @@ AnkiMark runs in Firefox for Android (142+), with Anki on the phone:
 2. Install a **signed** AnkiMark `.xpi` (see [Firefox](#firefox): `npx web-ext sign
    --channel=unlisted`), copy it to the phone, then in Firefox: *Settings → About
    Firefox*, tap the logo five times to enable the debug menu, go back to *Settings*
-   and use *Install extension from file*.
+   and use *Install extension from file*. If your Firefox doesn't offer that entry,
+   use Firefox Nightly, which does.
 3. Open AnkiMark from the Firefox menu (*Extensions → AnkiMark*), grant access if
    asked, set the base filter and sync as on desktop.
 
