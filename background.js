@@ -1,4 +1,9 @@
-importScripts("japanese.js", "config.js");
+// Chrome runs this as a service worker; Firefox as a background page that
+// already loaded these via manifest background.scripts.
+if (typeof importScripts === "function") importScripts("japanese.js", "config.js");
+
+// Firefox has promise-based `browser`; Chrome only `chrome`.
+const ext = globalThis.browser ?? globalThis.chrome;
 
 const { loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature } = AnkiMarkConfig;
 
@@ -6,7 +11,7 @@ const ANKI_URL = "http://127.0.0.1:8765";
 const RESYNC_MINUTES = 60;
 
 async function anki(action, params = {}) {
-  const { apiKey } = await chrome.storage.local.get("apiKey");
+  const { apiKey } = await ext.storage.local.get("apiKey");
   const body = { action, version: 6, params };
   if (apiKey) body.key = apiKey;
   let res;
@@ -101,7 +106,7 @@ async function sync() {
     time: Date.now(),
     signature: syncSignature(cfg),
   };
-  await chrome.storage.local.set({ dict, syncInfo });
+  await ext.storage.local.set({ dict, syncInfo });
   return syncInfo;
 }
 
@@ -140,7 +145,7 @@ const handlers = {
   },
 };
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   const h = handlers[msg?.type];
   if (!h) return false;
   h(msg)
@@ -150,26 +155,26 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 });
 
 function scheduleResync() {
-  chrome.alarms.create("resync", { periodInMinutes: RESYNC_MINUTES });
+  ext.alarms.create("resync", { periodInMinutes: RESYNC_MINUTES });
 }
 
 // Settings from 0.1 had a single deck and fixed new/learning/mature levels.
 async function migrate() {
-  const s = await chrome.storage.local.get(["deck", "levels", "baseQuery"]);
+  const s = await ext.storage.local.get(["deck", "levels", "baseQuery"]);
   if (s.deck === undefined && s.levels === undefined) return;
-  if (s.deck && s.baseQuery === undefined) await chrome.storage.local.set({ baseQuery: deckQuery(s.deck) });
-  await chrome.storage.local.remove(["deck", "levels", "dict"]);
+  if (s.deck && s.baseQuery === undefined) await ext.storage.local.set({ baseQuery: deckQuery(s.deck) });
+  await ext.storage.local.remove(["deck", "levels", "dict"]);
   sync().catch(() => {});
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+ext.runtime.onInstalled.addListener(() => {
   scheduleResync();
   migrate();
 });
-chrome.runtime.onStartup.addListener(() => {
+ext.runtime.onStartup.addListener(() => {
   scheduleResync();
   sync().catch(() => {});
 });
-chrome.alarms.onAlarm.addListener((alarm) => {
+ext.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "resync") sync().catch(() => {});
 });

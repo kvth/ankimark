@@ -1,9 +1,10 @@
 const $ = (id) => document.getElementById(id);
-const store = chrome.storage.local;
+const ext = AnkiMarkConfig.ext;
+const store = ext.storage.local;
 const { loadConfig, syncSignature } = AnkiMarkConfig;
 
 async function call(type, params = {}) {
-  const res = await chrome.runtime.sendMessage({ type, ...params });
+  const res = await ext.runtime.sendMessage({ type, ...params });
   if (!res?.ok) throw new Error(res?.error || "No response from background");
   return res.result;
 }
@@ -23,6 +24,15 @@ function timeAgo(t) {
 
 let cfg;
 let pageCounts = {};
+
+// Firefox treats host permissions as optional and may not grant them at install.
+const ACCESS = { origins: ext.runtime.getManifest().host_permissions };
+
+async function checkAccess() {
+  const ok = await ext.permissions.contains(ACCESS).catch(() => true);
+  $("access").hidden = ok;
+  return ok;
+}
 
 async function refreshState() {
   cfg = await loadConfig([...Object.keys(AnkiMarkConfig.DEFAULTS), "syncInfo"]);
@@ -66,7 +76,7 @@ function renderRules() {
 }
 
 async function initSiteToggle() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
   let host = "";
   try {
     const url = new URL(tab?.url || "");
@@ -92,7 +102,7 @@ async function initSiteToggle() {
 async function showPageStats(tab) {
   if (!tab?.id) return;
   try {
-    const r = await chrome.tabs.sendMessage(tab.id, { type: "pageStats" }, { frameId: 0 });
+    const r = await ext.tabs.sendMessage(tab.id, { type: "pageStats" }, { frameId: 0 });
     pageCounts = r.counts;
     const total = Object.values(r.counts).reduce((a, b) => a + b, 0);
     $("pageStats").textContent = total ? `${total} marks on this page (${r.unique} notes)` : "No known words on this page";
@@ -110,7 +120,7 @@ async function init() {
 
   $("enabled").checked = cfg.enabled;
   $("enabled").addEventListener("change", (e) => store.set({ enabled: e.target.checked }));
-  $("settings").addEventListener("click", () => chrome.runtime.openOptionsPage());
+  $("settings").addEventListener("click", () => ext.runtime.openOptionsPage());
 
   $("sync").addEventListener("click", async () => {
     const btn = $("sync");
@@ -129,11 +139,19 @@ async function init() {
 
   // Page highlights refresh shortly after any settings change.
   let timer = 0;
-  chrome.storage.onChanged.addListener(() => {
+  ext.storage.onChanged.addListener(() => {
     refreshState();
     clearTimeout(timer);
     timer = setTimeout(() => showPageStats(tab), 700);
   });
+
+  // permissions.request must run straight from the click, before any await
+  $("grantAccess").addEventListener("click", () => {
+    ext.permissions.request(ACCESS).then(async (granted) => {
+      if (granted && (await checkAccess())) location.reload();
+    });
+  });
+  if (!(await checkAccess())) return;
 
   call("status").then(
     () => {

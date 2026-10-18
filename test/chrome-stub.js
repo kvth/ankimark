@@ -40,6 +40,11 @@
       },
       onMessage: { addListener() {} },
       openOptionsPage() {},
+      getManifest: () => ({ version: "test", host_permissions: [] }),
+    },
+    permissions: {
+      contains: async () => true,
+      request: async () => true,
     },
   };
   window.ankimarkStub = data;

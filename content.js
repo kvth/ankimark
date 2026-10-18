@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const { JP_CHAR, Matcher } = self.AnkiMarkJP;
-  const { loadConfig, isColor } = self.AnkiMarkConfig;
+  const { ext, loadConfig, isColor } = self.AnkiMarkConfig;
 
   const SKIP_TAGS = new Set([
     "SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "INPUT", "SELECT", "OPTION",
@@ -184,12 +184,12 @@
       if (!span) return;
       e.preventDefault();
       e.stopPropagation();
-      chrome.runtime.sendMessage({ type: "browse", nid: Number(span.dataset.nid) });
+      ext.runtime.sendMessage({ type: "browse", nid: Number(span.dataset.nid) });
     },
     true
   );
 
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg?.type !== "pageStats" || window !== window.top) return false;
     const counts = {};
     const unique = new Set();
@@ -202,7 +202,7 @@
   });
 
   let refreshTimer = 0;
-  chrome.storage.onChanged.addListener((changes, area) => {
+  ext.storage.onChanged.addListener((changes, area) => {
     if (area !== "local" || !WATCHED_KEYS.some((k) => k in changes)) return;
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(refresh, 150);

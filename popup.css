@@ -77,3 +77,4 @@ button:disabled { opacity: 0.5; cursor: default; }
 .grow { flex: 1; }
 .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
 body.popup > button { width: 100%; }
+#access p { margin: 0 0 6px; }

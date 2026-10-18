@@ -1,11 +1,12 @@
 // Shared settings helpers. Loaded by background, content script, popup and options page.
 (function (root) {
   "use strict";
+  const ext = root.browser ?? root.chrome;
 
   // Rules are checked top to bottom; a word gets the colour of the first
   // enabled rule that one of its notes matches.
   const DEFAULT_RULES = [
-    { id: "leech", name: "Leech", query: "prop:lapses>=4", color: "#e5484d", enabled: false },
+    { id: "leech", name: "Leech", query: "prop:lapses>=8", color: "#e5484d", enabled: false },
     { id: "mature", name: "Mature", query: "prop:ivl>=21", color: "#28c85a", enabled: true },
     { id: "learning", name: "Learning", query: "-is:new", color: "#ffa600", enabled: true },
     { id: "new", name: "New", query: "is:new", color: "#408cff", enabled: true },
@@ -25,7 +26,7 @@
   };
 
   async function loadConfig(keys = Object.keys(DEFAULTS)) {
-    const s = await chrome.storage.local.get(keys);
+    const s = await ext.storage.local.get(keys);
     const out = {};
     for (const k of keys) out[k] = s[k] ?? (k in DEFAULTS ? structuredClone(DEFAULTS[k]) : undefined);
     return out;
@@ -56,6 +57,6 @@
   const newRuleId = () => "r" + Math.random().toString(36).slice(2, 8);
 
   root.AnkiMarkConfig = {
-    DEFAULT_RULES, DEFAULTS, loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature, isColor, newRuleId,
+    ext, DEFAULT_RULES, DEFAULTS, loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature, isColor, newRuleId,
   };
 })(self);

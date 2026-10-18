@@ -1,6 +1,6 @@
 # AnkiMark
 
-Chrome extension that highlights Japanese words on any web page that you already
+Chrome and Firefox extension that highlights Japanese words on any web page that you already
 have notes for in Anki. Talks to Anki through
 [AnkiConnect](https://ankiweb.net/shared/info/2055492159).
 
@@ -11,8 +11,13 @@ an Anki search plus a colour. Hover a word to see which rule it matched.
 ## Setup
 
 1. Install AnkiConnect in Anki (add-on code `2055492159`) and keep Anki running.
-2. Open `chrome://extensions`, turn on *Developer mode*, click *Load unpacked*, and
-   pick this folder.
+2. Load the extension:
+   - **Chrome**: open `chrome://extensions`, turn on *Developer mode*, click
+     *Load unpacked*, and pick this folder.
+   - **Firefox** (140+): open `about:debugging#/runtime/this-firefox`, click
+     *Load Temporary Add-on…*, and pick `manifest.json` in this folder. Temporary
+     add-ons are removed when Firefox restarts; see [Firefox](#firefox) for a
+     permanent install.
 3. Click the AnkiMark icon. The first time, Anki shows an AnkiConnect permission
    dialog. Click *Yes* to allow the extension.
 4. Click **Rules & settings…**:
@@ -23,6 +28,22 @@ an Anki search plus a colour. Hover a word to see which rule it matched.
 5. Click **Sync now**. Open tabs update right away.
 
 The word list is synced again every hour and when the browser starts, as long as Anki is running.
+
+## Firefox
+
+The same code runs in both browsers. The manifest lists the background script both
+ways (`service_worker` for Chrome, `scripts` for Firefox; each browser ignores the
+other), and the scripts use `browser.*` when it exists, else `chrome.*`.
+
+- **Site access.** Firefox may not grant an extension's site access at install. If
+  the popup says so, click **Grant access** (or allow it under the add-on's
+  *Permissions* tab in `about:addons`).
+- **AnkiConnect permission.** Each Firefox install has its own random
+  `moz-extension://…` origin, so Anki asks once per install.
+- **Permanent install.** Firefox only keeps signed add-ons. Package with
+  `npx web-ext build` and sign it on [addons.mozilla.org](https://addons.mozilla.org/developers/)
+  ("On your own" keeps it unlisted), or with `npx web-ext sign --channel=unlisted`
+  and an AMO API key. Check the package first with `npx web-ext lint`.
 
 ## Rules
 
@@ -35,7 +56,7 @@ Default rules:
 
 | Rule     | Search           | Colour |
 |----------|------------------|--------|
-| Leech    | `prop:lapses>=4` | red (off by default) |
+| Leech    | `prop:lapses>=8` | red (off by default) |
 | Mature   | `prop:ivl>=21`   | green  |
 | Learning | `-is:new`        | orange |
 | New      | `is:new`         | blue   |

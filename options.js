@@ -1,9 +1,10 @@
 const $ = (id) => document.getElementById(id);
-const store = chrome.storage.local;
+const ext = AnkiMarkConfig.ext;
+const store = ext.storage.local;
 const { DEFAULTS, DEFAULT_RULES, loadConfig, deckQuery, syncSignature, newRuleId } = AnkiMarkConfig;
 
 const EXAMPLES = [
-  { name: "Leech", query: "prop:lapses>=4", color: "#e5484d" },
+  { name: "Leech", query: "prop:lapses>=8", color: "#e5484d" },
   { name: "Due today", query: "is:due", color: "#b45cff" },
   { name: "Forgot this week", query: "rated:7:1", color: "#ff6b3d" },
   { name: "Suspended", query: "is:suspended", color: "#9a9aa3" },
@@ -24,7 +25,7 @@ let ruleResults = {};
 history.scrollRestoration = "manual";
 
 async function call(type, params = {}) {
-  const res = await chrome.runtime.sendMessage({ type, ...params });
+  const res = await ext.runtime.sendMessage({ type, ...params });
   if (!res?.ok) throw new Error(res?.error || "No response from background");
   return res.result;
 }
@@ -264,7 +265,7 @@ async function init() {
 
 function exportSettings() {
   clearTimeout(saveTimer);
-  const data = { ankimark: chrome.runtime.getManifest?.().version ?? "dev" };
+  const data = { ankimark: ext.runtime.getManifest?.().version ?? "dev" };
   for (const k of EXPORT_KEYS) data[k] = cfg[k];
   const blob = new Blob([JSON.stringify(data, null, 2) + "\n"], { type: "application/json" });
   const a = el("a", {
