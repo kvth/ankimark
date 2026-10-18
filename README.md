@@ -111,10 +111,14 @@ and leaves the rest alone. The API key is never exported. After an import, sync 
   cloze markers, `[sound:]` tags and parentheses (`勉強（する）` → `勉強`) are stripped.
   Lists like `食べる、喰べる` are split into separate words.
 - On the page, the longest known word at each position wins (`日本語` beats `日本`).
-- *Match conjugated forms* (on by default) is a simple rule, not a real deinflector.
-  A verb or i-adjective whose stem contains kanji also matches its stem when hiragana
-  follows: `食べる` matches `食べ|た`, `書く` matches `書|いて`, `高い` matches `高|かった`.
-  Only the stem is highlighted.
+- *Match conjugated forms* (on by default, can be turned off in the settings) undoes verb
+  and adjective endings step by step with a table of rules: 食べさせられなかった →
+  食べさせられない → 食べさせられる → 食べさせる → 食べる. It covers past, negative, polite,
+  て-form, たい, passive, causative, potential, volitional, ば, ている / ておく / てしまう /
+  ちゃう, i-adjectives, する and 来る, and chains of them. The whole inflected word is
+  highlighted, and `勉強した` also matches a note for the noun `勉強`. A form only counts
+  when the result is a word in your notes, and a few checks keep ordinary kana from being
+  read as verbs. The rules are written for AnkiMark (not copied from Yomitan).
 - Kana-only words shorter than 2 characters are ignored by default (so `は`, `に` and
   similar particle-like notes don't flood the page). You can change this in the settings.
 - Text inside inputs, textareas, `code`/`pre` and editable areas is never changed.
@@ -124,10 +128,11 @@ and leaves the rest alone. The API key is never exported. After an import, sync 
 - `manifest.json`: MV3 manifest
 - `background.js`: AnkiConnect calls, sync, hourly resync
 - `config.js`: default rules and settings, search helpers (shared by all scripts)
-- `japanese.js`: field cleaning and the word matcher (shared by all scripts)
+- `japanese.js`: field cleaning, conjugation rules and the word matcher (shared by all scripts)
 - `content.js` / `content.css`: highlighting in pages, including content added later
 - `popup.*`: rule toggles, sync button, per-site switch
 - `options.*`: rules, base filter, fields and display settings
+- `test/japanese.test.mjs`: matcher and conjugation tests (`node --test test/*.test.mjs`)
 - `test/harness.html` + `test/chrome-stub.js`: runs the content script with a stubbed
   `chrome` API (`python3 -m http.server` in this folder, then open `/test/harness.html`)
 
