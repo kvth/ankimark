@@ -1,6 +1,6 @@
 # AnkiMark
 
-Chrome and Firefox extension that highlights Japanese words on any web page that you already
+Chrome and Firefox (desktop and Android) extension that highlights Japanese words on any web page that you already
 have notes for in Anki. Talks to Anki through
 [AnkiConnect](https://ankiweb.net/shared/info/2055492159).
 
@@ -44,6 +44,34 @@ other), and the scripts use `browser.*` when it exists, else `chrome.*`.
   `npx web-ext build` and sign it on [addons.mozilla.org](https://addons.mozilla.org/developers/)
   ("On your own" keeps it unlisted), or with `npx web-ext sign --channel=unlisted`
   and an AMO API key. Check the package first with `npx web-ext lint`.
+
+## Firefox for Android
+
+AnkiMark runs in Firefox for Android (142+), with Anki on the phone:
+
+1. Install [AnkiDroid](https://github.com/ankidroid/Anki-Android) and
+   [AnkiConnect Android](https://github.com/KamWithK/AnkiconnectAndroid), open
+   AnkiConnect Android and tap *Start service*. It serves the same API on
+   `127.0.0.1:8765`. Turn battery optimisation off for both apps so the service keeps
+   running.
+2. Install a **signed** AnkiMark `.xpi` (see [Firefox](#firefox): `npx web-ext sign
+   --channel=unlisted`), copy it to the phone, then in Firefox: *Settings → About
+   Firefox*, tap the logo five times to enable the debug menu, go back to *Settings*
+   and use *Install extension from file*.
+3. Open AnkiMark from the Firefox menu (*Extensions → AnkiMark*), grant access if
+   asked, set the base filter and sync as on desktop.
+
+Differences on Android:
+
+- AnkiConnect Android has no `requestPermission`; AnkiMark then just checks that
+  `deckNames` answers. It does support `deckNames`, `findNotes` and `notesInfo`, all
+  AnkiMark needs to sync.
+- Searches run through AnkiDroid and are slower than on desktop. Quoted searches such
+  as `"deck:My Deck"` need AnkiDroid's new (Rust) backend, which current versions use.
+- There is no hover or Alt+click on a touch screen, so the tooltip and "open in Anki"
+  are desktop-only.
+- For development, `npx web-ext run -t firefox-android` installs an unsigned copy
+  over USB (adb, with *Remote debugging via USB* on in Firefox's settings).
 
 ## Rules
 

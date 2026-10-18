@@ -18,7 +18,9 @@ async function anki(action, params = {}) {
   try {
     res = await fetch(ANKI_URL, { method: "POST", body: JSON.stringify(body) });
   } catch (e) {
-    throw new Error("Anki is not reachable. Is Anki running with AnkiConnect installed?");
+    throw Object.assign(new Error("Anki is not reachable. Is Anki running with AnkiConnect installed?"), {
+      unreachable: true,
+    });
   }
   const json = await res.json();
   // Anki wraps parts of its messages in invisible bidi isolate marks.
@@ -28,8 +30,17 @@ async function anki(action, params = {}) {
 
 // AnkiConnect only trusts listed origins; requestPermission pops up a dialog
 // in Anki the first time so the user can allow this extension.
+// AnkiConnect Android (with AnkiDroid) has no requestPermission and no origin
+// check: when Anki answers but rejects the action, deckNames confirms it serves us.
 async function connect() {
-  const perm = await anki("requestPermission");
+  let perm;
+  try {
+    perm = await anki("requestPermission");
+  } catch (e) {
+    if (e.unreachable) throw e;
+    await anki("deckNames");
+    return { permission: "granted", version: null };
+  }
   if (perm.permission !== "granted") {
     throw new Error("Permission denied in Anki. Allow AnkiMark in the AnkiConnect dialog.");
   }
