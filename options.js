@@ -16,6 +16,7 @@ const EXAMPLES = [
 // Settings that go into an export file (everything except the API key).
 const EXPORT_KEYS = [
   "baseQuery", "rules", "fields", "style", "opacity", "conjugations", "kanaMinLen", "enabled", "excludedHosts",
+  "syncMinutes",
 ];
 
 let cfg;
@@ -223,6 +224,26 @@ async function init() {
   });
 
   // AnkiConnect
+  $("ankiUrl").value = cfg.ankiUrl;
+  $("ankiUrl").addEventListener("change", async (e) => {
+    let url = e.target.value.trim() || DEFAULTS.ankiUrl;
+    if (!/^https?:\/\//i.test(url)) url = "http://" + url;
+    try {
+      url = new URL(url).href.replace(/\/$/, "");
+    } catch {
+      showError(`"${e.target.value}" is not a valid address.`);
+      return;
+    }
+    e.target.value = url;
+    cfg.ankiUrl = url;
+    await store.set({ ankiUrl: url });
+    connect();
+  });
+  $("syncMinutes").value = String(cfg.syncMinutes);
+  $("syncMinutes").addEventListener("change", (e) => {
+    cfg.syncMinutes = Number(e.target.value);
+    save(["syncMinutes"], 0);
+  });
   $("apiKey").value = cfg.apiKey;
   $("apiKey").addEventListener("change", async (e) => {
     cfg.apiKey = e.target.value.trim();
@@ -293,6 +314,7 @@ function parseImport(data) {
   if (Number.isFinite(data.kanaMinLen)) out.kanaMinLen = clamp(data.kanaMinLen, 1, 10);
   if (typeof data.conjugations === "boolean") out.conjugations = data.conjugations;
   if (typeof data.enabled === "boolean") out.enabled = data.enabled;
+  if ([0, 1, 5, 15, 60].includes(data.syncMinutes)) out.syncMinutes = data.syncMinutes;
 
   if (data.rules !== undefined) {
     if (!Array.isArray(data.rules)) throw new Error("\"rules\" must be a list.");

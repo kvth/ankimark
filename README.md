@@ -27,7 +27,25 @@ an Anki search plus a colour. Hover a word to see which rule it matched.
      If you tick none, each note's first field is used.
 5. Click **Sync now**. Open tabs update right away.
 
-The word list is synced again every hour and when the browser starts, as long as Anki is running.
+After that it syncs every 5 minutes (adjustable under *Rules & settings*, or off), when the
+browser starts, and when you open the popup and the last sync is over a minute old. A sync
+only reads notes that are new or edited since the last one (via `notesModTime`; AnkiConnect
+Android lacks it, so there only new notes are read, plus everything once a day). The rule searches run every time, since cards change state with every review.
+
+## Page coverage
+
+The popup shows how much of the visible Japanese text on the current page is marked,
+counted in characters, as a percentage with a bar in the rule colours, and each rule's
+share next to it. Only enabled rules count, and hidden text (closed menus etc.) is left out.
+
+## Anki on another computer
+
+AnkiConnect's address defaults to `http://localhost:8765`: Anki on the same computer, or
+AnkiConnect Android on the same phone. To reach Anki on another machine (e.g. the phone
+using your desktop's Anki over Wi-Fi), enter that machine's address under *Rules &
+settings → AnkiConnect*, e.g. `http://192.168.0.20:8765`, and on that machine set
+`"webBindAddress": "0.0.0.0"` in AnkiConnect's config and restart Anki. Anyone on the network
+can then reach your Anki, so also set an `apiKey` there and enter it in AnkiMark.
 
 ## Firefox
 
@@ -103,7 +121,7 @@ reports invalid searches.
 
 The settings page can **export** your rules and settings to a JSON file and **import**
 them again (e.g. on another computer). Importing replaces the settings found in the file
-and leaves the rest alone. The API key is never exported. After an import, sync once.
+and leaves the rest alone. The Anki address and API key are never exported. After an import, sync once.
 
 ## How matching works
 
@@ -126,11 +144,11 @@ and leaves the rest alone. The API key is never exported. After an import, sync 
 ## Files
 
 - `manifest.json`: MV3 manifest
-- `background.js`: AnkiConnect calls, sync, hourly resync
+- `background.js`: AnkiConnect calls, incremental sync, auto-sync
 - `config.js`: default rules and settings, search helpers (shared by all scripts)
 - `japanese.js`: field cleaning, conjugation rules and the word matcher (shared by all scripts)
 - `content.js` / `content.css`: highlighting in pages, including content added later
-- `popup.*`: rule toggles, sync button, per-site switch
+- `popup.*`: page coverage, rule toggles, sync button, per-site switch
 - `options.*`: rules, base filter, fields and display settings
 - `test/japanese.test.mjs`: matcher and conjugation tests (`node --test test/*.test.mjs`)
 - `test/harness.html` + `test/chrome-stub.js`: runs the content script with a stubbed

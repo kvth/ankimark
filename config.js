@@ -23,6 +23,8 @@
     rules: DEFAULT_RULES,
     fields: [],
     apiKey: "",
+    ankiUrl: "http://localhost:8765",
+    syncMinutes: 5, // 0 = only on demand
   };
 
   async function loadConfig(keys = Object.keys(DEFAULTS)) {

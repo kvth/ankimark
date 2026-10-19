@@ -176,6 +176,34 @@
     if (cfg.enabled && !cfg.excludedHosts.includes(host)) start();
   }
 
+  function countJapanese(text) {
+    let n = 0;
+    for (const ch of text) if (JP_CHAR.test(ch)) n++;
+    return n;
+  }
+
+  // How much of the page's visible Japanese text is marked, in characters,
+  // in total and per rule. Hidden text (menus, collapsed sections) is left out.
+  function pageStats() {
+    const marks = {};
+    const chars = {};
+    const unique = new Set();
+    for (const span of document.querySelectorAll(`span.${MARK_CLASS}`)) {
+      if (span.checkVisibility && !span.checkVisibility()) continue;
+      const rule = span.dataset.rule;
+      marks[rule] = (marks[rule] || 0) + 1;
+      chars[rule] = (chars[rule] || 0) + countJapanese(span.textContent);
+      unique.add(span.dataset.nid);
+    }
+    return {
+      active,
+      marks,
+      chars,
+      total: countJapanese(document.body?.innerText ?? ""),
+      unique: unique.size,
+    };
+  }
+
   document.addEventListener(
     "click",
     (e) => {
@@ -191,13 +219,7 @@
 
   ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg?.type !== "pageStats" || window !== window.top) return false;
-    const counts = {};
-    const unique = new Set();
-    for (const span of document.querySelectorAll(`span.${MARK_CLASS}`)) {
-      counts[span.dataset.rule] = (counts[span.dataset.rule] || 0) + 1;
-      unique.add(span.dataset.nid);
-    }
-    sendResponse({ counts, unique: unique.size });
+    sendResponse(pageStats());
     return false;
   });
 

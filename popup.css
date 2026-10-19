@@ -78,3 +78,8 @@ button:disabled { opacity: 0.5; cursor: default; }
 .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
 body.popup > button { width: 100%; }
 #access p { margin: 0 0 6px; }
+.cov-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.cov-head b { font-size: 20px; }
+.bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--border); }
+.bar i { display: block; height: 100%; }
+.row button { white-space: nowrap; flex: none; }

@@ -23,7 +23,10 @@ function timeAgo(t) {
 }
 
 let cfg;
-let pageCounts = {};
+let page = null; // pageStats from the content script
+
+// Opening the popup syncs in the background when the last sync is older than this.
+const SYNC_ON_OPEN_AFTER_MS = 60_000;
 
 // Firefox treats host permissions as optional and may not grant them at install.
 const ACCESS = { origins: ext.runtime.getManifest().host_permissions };
@@ -45,6 +48,7 @@ async function refreshState() {
     ? "No base filter set, so rules search your whole collection. Set your deck under Rules & settings."
     : "Searches changed since the last sync.";
   renderRules();
+  renderCoverage();
 }
 
 function renderRules() {
@@ -69,7 +73,11 @@ function renderRules() {
     name.title = rule.query;
     const count = document.createElement("span");
     count.className = "hint";
-    count.textContent = pageCounts[rule.id] ? String(pageCounts[rule.id]) : "";
+    const chars = page?.chars?.[rule.id] ?? 0;
+    if (chars && page.total) {
+      count.textContent = `${percent(chars / page.total)}`;
+      count.title = `${page.marks[rule.id]} words on this page`;
+    }
     label.append(cb, sw, name, count);
     box.appendChild(label);
   }
@@ -99,18 +107,51 @@ async function initSiteToggle() {
   return tab;
 }
 
+function percent(x) {
+  const p = x * 100;
+  return p > 0 && p < 1 ? "<1%" : `${Math.round(p)}%`;
+}
+
+// Share of the page's visible Japanese text (in characters) each rule marks.
+function renderCoverage() {
+  const box = $("coverage");
+  if (!page?.active || !page.total) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  const bar = $("covBar");
+  bar.innerHTML = "";
+  let known = 0;
+  for (const rule of cfg.rules) {
+    const chars = page.chars[rule.id] ?? 0;
+    if (!rule.enabled || !chars) continue;
+    known += chars;
+    const seg = document.createElement("i");
+    seg.style.width = `${(chars / page.total) * 100}%`;
+    seg.style.background = rule.color;
+    seg.title = `${rule.name}: ${percent(chars / page.total)}`;
+    bar.appendChild(seg);
+  }
+  $("covPct").textContent = percent(known / page.total);
+  $("covText").textContent = `of the Japanese text on this page is marked (${page.unique} notes)`;
+}
+
 async function showPageStats(tab) {
   if (!tab?.id) return;
   try {
-    const r = await ext.tabs.sendMessage(tab.id, { type: "pageStats" }, { frameId: 0 });
-    pageCounts = r.counts;
-    const total = Object.values(r.counts).reduce((a, b) => a + b, 0);
-    $("pageStats").textContent = total ? `${total} marks on this page (${r.unique} notes)` : "No known words on this page";
+    page = await ext.tabs.sendMessage(tab.id, { type: "pageStats" }, { frameId: 0 });
+    $("pageStats").textContent = !page.active
+      ? "Highlighting is off on this page"
+      : page.total
+        ? ""
+        : "No Japanese text on this page";
   } catch {
-    pageCounts = {};
+    page = null;
     $("pageStats").textContent = "Reload the page to highlight it";
   }
   renderRules();
+  renderCoverage();
 }
 
 async function init() {
@@ -122,20 +163,21 @@ async function init() {
   $("enabled").addEventListener("change", (e) => store.set({ enabled: e.target.checked }));
   $("settings").addEventListener("click", () => ext.runtime.openOptionsPage());
 
-  $("sync").addEventListener("click", async () => {
+  async function runSync({ quiet = false } = {}) {
     const btn = $("sync");
     btn.disabled = true;
     btn.textContent = "Syncing…";
-    showError("");
+    if (!quiet) showError("");
     try {
       await call("sync");
     } catch (e) {
-      showError(e.message);
+      if (!quiet) showError(e.message);
     } finally {
       btn.disabled = false;
       btn.textContent = "Sync from Anki";
     }
-  });
+  }
+  $("sync").addEventListener("click", () => runSync());
 
   // Page highlights refresh shortly after any settings change.
   let timer = 0;
@@ -157,6 +199,8 @@ async function init() {
     () => {
       $("conn").className = "pill ok";
       $("conn").textContent = "connected";
+      const last = cfg.syncInfo?.time ?? 0;
+      if (cfg.baseQuery.trim() && Date.now() - last > SYNC_ON_OPEN_AFTER_MS) runSync({ quiet: true });
     },
     (e) => {
       $("conn").className = "pill bad";

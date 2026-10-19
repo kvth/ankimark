@@ -70,14 +70,31 @@
 
   <section>
     <h2>AnkiConnect</h2>
+    <label for="ankiUrl">Address</label>
+    <input type="text" id="ankiUrl" spellcheck="false" placeholder="http://localhost:8765">
+    <p class="hint">Default <code>http://localhost:8765</code>: Anki on this computer, or AnkiConnect Android on
+      the phone. To use Anki on another computer, enter its address, e.g. <code>http://192.168.0.20:8765</code>,
+      and set <code>"webBindAddress": "0.0.0.0"</code> in that AnkiConnect's config (better with an API key too,
+      since anyone on the network can then reach your Anki).</p>
     <label for="apiKey">API key (only if you set one in AnkiConnect's config)</label>
     <input type="password" id="apiKey" autocomplete="off">
+    <label class="inline">Sync automatically
+      <select id="syncMinutes">
+        <option value="1">every minute</option>
+        <option value="5">every 5 minutes</option>
+        <option value="15">every 15 minutes</option>
+        <option value="60">every hour</option>
+        <option value="0">only when I click Sync</option>
+      </select>
+    </label>
+    <p class="hint">A sync only reads notes that are new or edited since the last one, so frequent syncs stay
+      cheap. Opening the popup also syncs when the last sync is over a minute old.</p>
   </section>
 
   <section>
     <h2>Backup</h2>
     <p class="hint">Save your rules and settings as a JSON file, or load them from one.
-      Importing replaces the current settings. The API key is not included.</p>
+      Importing replaces the current settings. The Anki address and API key are not included.</p>
     <div class="row">
       <button id="export">Export settings</button>
       <button id="import">Import settings…</button>

@@ -5,20 +5,17 @@ if (typeof importScripts === "function") importScripts("japanese.js", "config.js
 // Firefox has promise-based `browser`; Chrome only `chrome`.
 const ext = globalThis.browser ?? globalThis.chrome;
 
-const { loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature } = AnkiMarkConfig;
-
-const ANKI_URL = "http://127.0.0.1:8765";
-const RESYNC_MINUTES = 60;
+const { loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature, DEFAULTS } = AnkiMarkConfig;
 
 async function anki(action, params = {}) {
-  const { apiKey } = await ext.storage.local.get("apiKey");
+  const { apiKey, ankiUrl } = await loadConfig(["apiKey", "ankiUrl"]);
   const body = { action, version: 6, params };
   if (apiKey) body.key = apiKey;
   let res;
   try {
-    res = await fetch(ANKI_URL, { method: "POST", body: JSON.stringify(body) });
+    res = await fetch(ankiUrl.trim() || DEFAULTS.ankiUrl, { method: "POST", body: JSON.stringify(body) });
   } catch (e) {
-    throw Object.assign(new Error("Anki is not reachable. Is Anki running with AnkiConnect installed?"), {
+    throw Object.assign(new Error(`Anki is not reachable at ${ankiUrl}. Is Anki running with AnkiConnect?`), {
       unreachable: true,
     });
   }
@@ -80,11 +77,41 @@ async function findRuleNotes(base, rule) {
   }
 }
 
+function noteWords(note, fields) {
+  let values = fields.filter((f) => note.fields[f]).map((f) => note.fields[f].value);
+  if (!values.length) {
+    const first = Object.values(note.fields).find((f) => f.order === 0);
+    if (first) values = [first.value];
+  }
+  return [...new Set(values.flatMap((v) => AnkiMarkJP.extractWords(v)))];
+}
+
+// When each note was last edited, or null where AnkiConnect lacks
+// notesModTime (AnkiConnect Android, old versions).
+async function modTimes(ids) {
+  try {
+    const out = new Map();
+    for (let i = 0; i < ids.length; i += 1000) {
+      for (const { noteId, mod } of await anki("notesModTime", { notes: ids.slice(i, i + 1000) })) out.set(noteId, mod);
+    }
+    return out;
+  } catch (e) {
+    if (e.unreachable) throw e;
+    return null;
+  }
+}
+
+const FULL_REREAD_MS = 24 * 60 * 60 * 1000;
+
 // dict: { word: [[ruleId, noteId], ...] } with one entry per matching rule.
 // All rules are synced (also disabled ones) so that toggling, reordering and
 // recolouring rules works without another sync.
-async function sync() {
-  const cfg = await loadConfig();
+//
+// Note words are cached (noteCache) so a sync only reads notes that are new
+// or were edited since the last one; the rule searches run every time, as
+// cards move between new / learning / mature with every review.
+async function runSync() {
+  const cfg = await loadConfig([...Object.keys(DEFAULTS), "noteCache", "dict"]);
   await connect();
   const rulesByNote = new Map();
   for (const rule of cfg.rules) {
@@ -93,32 +120,53 @@ async function sync() {
       rulesByNote.get(nid).push(rule.id);
     }
   }
-  const notes = await notesInfo([...rulesByNote.keys()]);
+  const ids = [...rulesByNote.keys()];
+
+  // A changed field list or Anki address invalidates every cached note.
+  const source = JSON.stringify([cfg.ankiUrl.trim(), [...cfg.fields].sort()]);
+  const mods = await modTimes(ids);
+  // Without edit times, re-read everything once a day so edited notes catch up.
+  const fresh = cfg.noteCache?.source === source && (mods || Date.now() - cfg.noteCache.fullAt < FULL_REREAD_MS);
+  const cached = fresh ? cfg.noteCache.notes : {};
+  const fullAt = fresh ? cfg.noteCache.fullAt : Date.now();
+  const notes = {};
+  const stale = [];
+  for (const id of ids) {
+    const hit = cached[id];
+    if (hit && (!mods || hit.mod === mods.get(id))) notes[id] = hit;
+    else stale.push(id);
+  }
+  for (const note of await notesInfo(stale)) {
+    notes[note.noteId] = { mod: mods?.get(note.noteId) ?? note.mod ?? 0, words: noteWords(note, cfg.fields) };
+  }
 
   const dict = {};
-  for (const note of notes) {
-    let values = cfg.fields.filter((f) => note.fields[f]).map((f) => note.fields[f].value);
-    if (!values.length) {
-      const first = Object.values(note.fields).find((f) => f.order === 0);
-      if (first) values = [first.value];
-    }
-    const ruleIds = rulesByNote.get(note.noteId);
-    for (const v of values) {
-      for (const word of AnkiMarkJP.extractWords(v)) {
-        const entry = (dict[word] ??= []);
-        for (const rid of ruleIds) if (!entry.some((e) => e[0] === rid)) entry.push([rid, note.noteId]);
-      }
+  for (const id of ids) {
+    for (const word of notes[id]?.words ?? []) {
+      const entry = (dict[word] ??= []);
+      for (const rid of rulesByNote.get(id)) if (!entry.some((e) => e[0] === rid)) entry.push([rid, id]);
     }
   }
 
   const syncInfo = {
-    notes: notes.length,
+    notes: ids.length,
     words: Object.keys(dict).length,
+    read: stale.length,
     time: Date.now(),
     signature: syncSignature(cfg),
   };
-  await ext.storage.local.set({ dict, syncInfo });
+  const update = { syncInfo, noteCache: { source, fullAt, notes } };
+  // Every open tab re-highlights when the word list changes, so only write it when it did.
+  if (JSON.stringify(dict) !== JSON.stringify(cfg.dict)) update.dict = dict;
+  await ext.storage.local.set(update);
   return syncInfo;
+}
+
+// One sync at a time: the alarm, the popup and the settings page may all ask.
+let running = null;
+function sync() {
+  running ??= runSync().finally(() => (running = null));
+  return running;
 }
 
 const handlers = {
@@ -149,7 +197,7 @@ const handlers = {
     }
     return out;
   },
-  sync,
+  sync: () => sync(),
   async browse({ nid }) {
     await anki("guiBrowse", { query: `nid:${nid}` });
     return true;
@@ -165,9 +213,15 @@ ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   return true;
 });
 
-function scheduleResync() {
-  ext.alarms.create("resync", { periodInMinutes: RESYNC_MINUTES });
+async function scheduleResync() {
+  const { syncMinutes } = await loadConfig(["syncMinutes"]);
+  await ext.alarms.clear("resync");
+  if (syncMinutes > 0) ext.alarms.create("resync", { periodInMinutes: syncMinutes });
 }
+
+ext.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && "syncMinutes" in changes) scheduleResync();
+});
 
 // Settings from 0.1 had a single deck and fixed new/learning/mature levels.
 async function migrate() {
