@@ -7,7 +7,16 @@ const ext = globalThis.browser ?? globalThis.chrome;
 
 const { loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature, DEFAULTS } = AnkiMarkConfig;
 
-async function anki(action, params = {}) {
+// One request at a time: AnkiConnect Android hands each straight to AnkiDroid,
+// and the popup, the settings page and a sync can all ask at once.
+let ankiQueue = Promise.resolve();
+function anki(action, params = {}) {
+  const res = ankiQueue.then(() => ankiRequest(action, params));
+  ankiQueue = res.catch(() => {});
+  return res;
+}
+
+async function ankiRequest(action, params) {
   const { apiKey, ankiUrl } = await loadConfig(["apiKey", "ankiUrl"]);
   const body = { action, version: 6, params };
   if (apiKey) body.key = apiKey;
@@ -27,15 +36,19 @@ async function anki(action, params = {}) {
 
 // AnkiConnect only trusts listed origins; requestPermission pops up a dialog
 // in Anki the first time so the user can allow this extension.
-// AnkiConnect Android (with AnkiDroid) has no requestPermission and no origin
-// check: when Anki answers but rejects the action, deckNames confirms it serves us.
+// AnkiConnect Android (with AnkiDroid) has no requestPermission, notesModTime
+// or origin check: when Anki answers but rejects the action, deckNames
+// confirms it serves us, and the unsupported actions are skipped from then on.
+let ankiConnectAndroid = false;
 async function connect() {
   let perm;
   try {
+    if (ankiConnectAndroid) throw new Error("no requestPermission");
     perm = await anki("requestPermission");
   } catch (e) {
     if (e.unreachable) throw e;
     await anki("deckNames");
+    ankiConnectAndroid = true;
     return { permission: "granted", version: null };
   }
   if (perm.permission !== "granted") {
@@ -44,10 +57,13 @@ async function connect() {
   return perm;
 }
 
+// Small batches: AnkiConnect Android builds each answer in memory several times.
+const NOTES_INFO_BATCH = 100;
+
 async function notesInfo(ids) {
   const out = [];
-  for (let i = 0; i < ids.length; i += 500) {
-    out.push(...(await anki("notesInfo", { notes: ids.slice(i, i + 500) })));
+  for (let i = 0; i < ids.length; i += NOTES_INFO_BATCH) {
+    out.push(...(await anki("notesInfo", { notes: ids.slice(i, i + NOTES_INFO_BATCH) })));
   }
   return out;
 }
@@ -89,6 +105,7 @@ function noteWords(note, fields) {
 // When each note was last edited, or null where AnkiConnect lacks
 // notesModTime (AnkiConnect Android, old versions).
 async function modTimes(ids) {
+  if (ankiConnectAndroid) return null;
   try {
     const out = new Map();
     for (let i = 0; i < ids.length; i += 1000) {
@@ -232,7 +249,10 @@ async function scheduleResync() {
 }
 
 ext.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && "syncMinutes" in changes) scheduleResync();
+  if (area !== "local") return;
+  if ("syncMinutes" in changes) scheduleResync();
+  // Another address may be desktop Anki again.
+  if ("ankiUrl" in changes) ankiConnectAndroid = false;
 });
 
 // Settings from 0.1 had a single deck and fixed new/learning/mature levels.
