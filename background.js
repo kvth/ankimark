@@ -162,10 +162,22 @@ async function runSync() {
   return syncInfo;
 }
 
+// Firefox stops an idle background page after 30 s even while it waits on
+// Anki, which on Android (slow AnkiDroid searches) kills long syncs. Any
+// extension API call resets that timer, so make a cheap one while work runs.
+async function keepAlive(promise) {
+  const timer = setInterval(() => ext.runtime.getPlatformInfo().catch(() => {}), 20_000);
+  try {
+    return await promise;
+  } finally {
+    clearInterval(timer);
+  }
+}
+
 // One sync at a time: the alarm, the popup and the settings page may all ask.
 let running = null;
 function sync() {
-  running ??= runSync().finally(() => (running = null));
+  running ??= keepAlive(runSync()).finally(() => (running = null));
   return running;
 }
 
@@ -207,7 +219,7 @@ const handlers = {
 ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   const h = handlers[msg?.type];
   if (!h) return false;
-  h(msg)
+  keepAlive(h(msg))
     .then((result) => sendResponse({ ok: true, result }))
     .catch((e) => sendResponse({ ok: false, error: String(e.message || e) }));
   return true;
