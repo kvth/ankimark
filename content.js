@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const { JP_CHAR, Matcher } = self.AnkiMarkJP;
-  const { ext, loadConfig, isColor } = self.AnkiMarkConfig;
+  const { ext, loadConfig, isColor, message } = self.AnkiMarkConfig;
 
   const SKIP_TAGS = new Set([
     "SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "INPUT", "SELECT", "OPTION",
@@ -212,7 +212,7 @@
       if (!span) return;
       e.preventDefault();
       e.stopPropagation();
-      ext.runtime.sendMessage({ type: "browse", nid: Number(span.dataset.nid) });
+      message({ type: "browse", nid: Number(span.dataset.nid) }).catch(() => {});
     },
     true
   );

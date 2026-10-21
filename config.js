@@ -55,10 +55,24 @@
     return JSON.stringify([cfg.baseQuery.trim(), cfg.rules.map((r) => [r.id, r.query.trim()]), [...cfg.fields].sort()]);
   }
 
+  // Message the background. Firefox suspends an idle background page, and the
+  // message meant to wake it can fail with "Receiving end does not exist"
+  // (often on Android), so retry a few times.
+  async function message(msg) {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await ext.runtime.sendMessage(msg);
+      } catch (e) {
+        if (attempt >= 4 || !/receiving end does not exist/i.test(e?.message)) throw e;
+        await new Promise((r) => setTimeout(r, 250 * attempt));
+      }
+    }
+  }
+
   const isColor = (c) => /^#[0-9a-f]{6}$/i.test(c);
   const newRuleId = () => "r" + Math.random().toString(36).slice(2, 8);
 
   root.AnkiMarkConfig = {
-    ext, DEFAULT_RULES, DEFAULTS, loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature, isColor, newRuleId,
+    ext, DEFAULT_RULES, DEFAULTS, loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature, message, isColor, newRuleId,
   };
 })(self);

@@ -4,7 +4,7 @@ const store = ext.storage.local;
 const { loadConfig, syncSignature } = AnkiMarkConfig;
 
 async function call(type, params = {}) {
-  const res = await ext.runtime.sendMessage({ type, ...params });
+  const res = await AnkiMarkConfig.message({ type, ...params });
   if (!res?.ok) throw new Error(res?.error || "No response from background");
   return res.result;
 }
