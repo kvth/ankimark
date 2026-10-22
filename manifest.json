@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AnkiMark",
-  "version": "0.4",
+  "version": "0.5",
   "description": "Highlights Japanese words on web pages that you already have notes for in an Anki deck (via AnkiConnect).",
   "permissions": [
     "storage",

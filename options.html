@@ -23,8 +23,10 @@
     <h2>Base filter</h2>
     <p class="hint">Put in front of every rule, usually your deck. Any Anki search works, e.g.
       <code>deck:"Japanese::Vocab" -is:suspended</code>. Leave it empty to search your whole collection.</p>
-    <input type="text" id="baseQuery" list="deckList" spellcheck="false" placeholder='deck:"Japanese"'>
-    <datalist id="deckList"></datalist>
+    <input type="text" id="baseQuery" spellcheck="false" placeholder='deck:"Japanese"'>
+    <label class="inline">Use a deck
+      <select id="deckPick"><option value="">Choose…</option></select>
+    </label>
   </section>
 
   <section>
@@ -78,6 +80,10 @@
       since anyone on the network can then reach your Anki).</p>
     <label for="apiKey">API key (only if you set one in AnkiConnect's config)</label>
     <input type="password" id="apiKey" autocomplete="off">
+    <label class="inline">Notes per request
+      <input type="number" id="notesBatch" min="10" max="1000" step="10"></label>
+    <p class="hint">How many notes a sync reads from Anki at once (default 100). Lower it if AnkiConnect
+      Android stops during a sync; desktop Anki copes with more.</p>
     <label class="inline">Sync automatically
       <select id="syncMinutes">
         <option value="1">every minute</option>

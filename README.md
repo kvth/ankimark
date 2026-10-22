@@ -21,7 +21,7 @@ an Anki search plus a colour. Hover a word to see which rule it matched.
 3. Click the AnkiMark icon. The first time, Anki shows an AnkiConnect permission
    dialog. Click *Yes* to allow the extension.
 4. Click **Rules & settings…**:
-   - set the **base filter**, usually your deck (`"deck:kaishi"`); the field suggests your decks
+   - set the **base filter**, usually your deck (`"deck:kaishi"`); or pick it under *Use a deck*
    - adjust the rules if you like
    - click **Load fields** and tick the field(s) holding the word (e.g. `Word`).
      If you tick none, each note's first field is used.
@@ -85,6 +85,8 @@ Differences on Android:
 - AnkiConnect Android has no `requestPermission`; AnkiMark then just checks that
   `deckNames` answers. It does support `deckNames`, `findNotes` and `notesInfo`, all
   AnkiMark needs to sync.
+- A sync reads notes in batches (*Rules & settings → AnkiConnect → Notes per request*, default
+  100). If AnkiConnect Android stops during a sync, lower it.
 - Searches run through AnkiDroid and are slower than on desktop. Quoted searches such
   as `"deck:My Deck"` need AnkiDroid's new (Rust) backend, which current versions use.
 - There is no hover or Alt+click on a touch screen, so the tooltip and "open in Anki"

@@ -59,3 +59,4 @@ input[type="range"] { width: 160px; }
   .rule .query { grid-column: 3 / -1; }
   .rule .result { grid-column: 3 / -1; }
 }
+input#notesBatch { width: 80px; }

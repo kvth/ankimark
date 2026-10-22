@@ -25,6 +25,7 @@
     apiKey: "",
     ankiUrl: "http://localhost:8765",
     syncMinutes: 5, // 0 = only on demand
+    notesBatch: 100, // notes per notesInfo request
   };
 
   async function loadConfig(keys = Object.keys(DEFAULTS)) {

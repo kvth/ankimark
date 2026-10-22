@@ -163,9 +163,16 @@ async function init() {
   $("baseQuery").value = cfg.baseQuery;
   $("baseQuery").addEventListener("input", (e) => {
     cfg.baseQuery = e.target.value;
+    showPickedDeck();
     ruleResults = {};
     renderRules();
     save(["baseQuery"], 500);
+  });
+  // A <select>, not a <datalist>: Firefox only offers datalist entries matching what is already typed.
+  $("deckPick").addEventListener("change", (e) => {
+    if (!e.target.value) return;
+    $("baseQuery").value = e.target.value;
+    $("baseQuery").dispatchEvent(new Event("input"));
   });
 
   // Rules
@@ -238,6 +245,12 @@ async function init() {
     cfg.ankiUrl = url;
     await store.set({ ankiUrl: url });
     connect();
+  });
+  $("notesBatch").value = cfg.notesBatch;
+  $("notesBatch").addEventListener("change", (e) => {
+    cfg.notesBatch = Math.max(10, Math.min(1000, parseInt(e.target.value, 10) || DEFAULTS.notesBatch));
+    e.target.value = cfg.notesBatch;
+    save(["notesBatch"], 0);
   });
   $("syncMinutes").value = String(cfg.syncMinutes);
   $("syncMinutes").addEventListener("change", (e) => {
@@ -361,12 +374,22 @@ async function importSettings(e) {
   }
 }
 
+// Show the deck in the picker when the base filter is exactly that deck.
+function showPickedDeck() {
+  const pick = $("deckPick");
+  pick.value = [...pick.options].some((o) => o.value && o.value === cfg.baseQuery.trim()) ? cfg.baseQuery.trim() : "";
+}
+
 async function connect() {
   try {
     const decks = await call("decks");
     $("conn").className = "pill ok";
     $("conn").textContent = "connected";
-    $("deckList").replaceChildren(...decks.map((d) => el("option", { value: deckQuery(d) })));
+    $("deckPick").replaceChildren(
+      el("option", { value: "", textContent: "Choose…" }),
+      ...decks.map((d) => el("option", { value: deckQuery(d), textContent: d }))
+    );
+    showPickedDeck();
     showError("");
     checkRules();
   } catch (e) {

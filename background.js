@@ -58,12 +58,12 @@ async function connect() {
 }
 
 // Small batches: AnkiConnect Android builds each answer in memory several times.
-const NOTES_INFO_BATCH = 100;
-
 async function notesInfo(ids) {
+  const { notesBatch } = await loadConfig(["notesBatch"]);
+  const batch = Math.max(10, Math.min(1000, notesBatch || DEFAULTS.notesBatch));
   const out = [];
-  for (let i = 0; i < ids.length; i += NOTES_INFO_BATCH) {
-    out.push(...(await anki("notesInfo", { notes: ids.slice(i, i + NOTES_INFO_BATCH) })));
+  for (let i = 0; i < ids.length; i += batch) {
+    out.push(...(await anki("notesInfo", { notes: ids.slice(i, i + batch) })));
   }
   return out;
 }
