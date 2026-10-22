@@ -75,4 +75,4 @@
   root.AnkiMarkConfig = {
     ext, DEFAULT_RULES, DEFAULTS, loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature, message, isColor, newRuleId,
   };
-})(self);
+})(globalThis);

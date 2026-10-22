@@ -292,4 +292,4 @@
   const api = { JP_CHAR, extractWords, deinflect, wordStem, Matcher };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.AnkiMarkJP = api;
-})(typeof self !== "undefined" ? self : globalThis);
+})(globalThis);

@@ -1,7 +1,7 @@
 (() => {
   "use strict";
-  const { JP_CHAR, Matcher } = self.AnkiMarkJP;
-  const { ext, loadConfig, isColor, message } = self.AnkiMarkConfig;
+  const { JP_CHAR, Matcher } = globalThis.AnkiMarkJP;
+  const { ext, loadConfig, isColor, message } = globalThis.AnkiMarkConfig;
 
   const SKIP_TAGS = new Set([
     "SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "INPUT", "SELECT", "OPTION",
