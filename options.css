@@ -52,6 +52,28 @@ button.subtle { border-color: transparent; color: var(--muted); }
 .examples button { font-size: 12px; padding: 2px 8px; }
 
 .fields { max-height: none; gap: 4px 16px; }
+
+h3 { font-size: 14px; margin: 18px 0 4px; }
+.script code { display: inline-block; background: none; padding: 0; color: var(--muted); }
+.script textarea {
+  display: block;
+  width: 100%;
+  margin: 2px 0;
+  font: 12px/1.45 ui-monospace, monospace;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  resize: vertical;
+  tab-size: 2;
+}
+.test-row { display: flex; gap: 6px; align-items: center; }
+.test-row input { flex: 1; font-family: ui-monospace, monospace; font-size: 13px; }
+.test-results { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+.test-results th, .test-results td { text-align: left; vertical-align: top; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+.test-results th { font-weight: 600; color: var(--muted); }
+.test-results .bad { color: var(--err-fg); }
 input[type="range"] { width: 160px; }
 
 @media (max-width: 640px) {

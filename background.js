@@ -58,13 +58,15 @@ async function connect() {
 }
 
 // Small batches: AnkiConnect Android builds each answer in memory several times.
-async function notesInfo(ids) {
+async function* noteBatches(ids) {
   const { notesBatch } = await loadConfig(["notesBatch"]);
   const batch = Math.max(10, Math.min(1000, notesBatch || DEFAULTS.notesBatch));
+  for (let i = 0; i < ids.length; i += batch) yield await anki("notesInfo", { notes: ids.slice(i, i + batch) });
+}
+
+async function notesInfo(ids) {
   const out = [];
-  for (let i = 0; i < ids.length; i += batch) {
-    out.push(...(await anki("notesInfo", { notes: ids.slice(i, i + batch) })));
-  }
+  for await (const batch of noteBatches(ids)) out.push(...batch);
   return out;
 }
 
@@ -93,13 +95,70 @@ async function findRuleNotes(base, rule) {
   }
 }
 
-function noteWords(note, fields) {
+// A note's words: its ticked fields (or, having none of them, its first
+// field) plus what the field script returned for it.
+function noteWords(note, fields, scriptWords = []) {
   let values = fields.filter((f) => note.fields[f]).map((f) => note.fields[f].value);
   if (!values.length) {
     const first = Object.values(note.fields).find((f) => f.order === 0);
     if (first) values = [first.value];
   }
-  return [...new Set(values.flatMap((v) => AnkiMarkJP.extractWords(v)))];
+  return [...new Set([...values, ...scriptWords].flatMap((v) => AnkiMarkJP.extractWords(v)))];
+}
+
+// ---- Field script --------------------------------------------------------
+//
+// The user's JavaScript (cfg.fieldScript, a function body taking `note`)
+// runs in sandbox.html, the only page allowed to compile code. Firefox's
+// background page holds that frame itself; Chrome's service worker has no
+// DOM, so there it lives in an offscreen document.
+
+// The note as the script sees it.
+function scriptNote(note) {
+  return {
+    noteId: note.noteId,
+    modelName: note.modelName,
+    tags: note.tags,
+    fields: Object.fromEntries(Object.entries(note.fields).map(([name, f]) => [name, f.value])),
+  };
+}
+
+const hasDom = typeof document !== "undefined";
+let offscreen = null; // Promise while Chrome's offscreen document is open
+let offscreenClosed = Promise.resolve();
+let sandboxUsers = 0;
+
+// Per note { words } or { error }.
+async function runFieldScript(code, notes) {
+  notes = notes.map(scriptNote);
+  if (hasDom) return AnkiMarkSandbox.run(code, notes);
+  offscreen ??= offscreenClosed.then(() =>
+    ext.offscreen.createDocument({
+      url: "offscreen.html",
+      reasons: ["IFRAME_SCRIPTING"],
+      justification: "Runs the user's field script in a sandboxed frame.",
+    })
+  );
+  await offscreen;
+  const res = await ext.runtime.sendMessage({ type: "runFieldScript", code, notes });
+  if (!res?.ok) throw new Error(res?.error || "No answer from the field script.");
+  return res.result;
+}
+
+// Removes the sandbox frame (and the offscreen document) when the last user is done.
+async function withSandbox(fn) {
+  sandboxUsers++;
+  try {
+    return await fn();
+  } finally {
+    if (--sandboxUsers === 0) {
+      if (hasDom) AnkiMarkSandbox.close();
+      else if (offscreen) {
+        offscreenClosed = offscreen.then(() => ext.offscreen.closeDocument()).catch(() => {});
+        offscreen = null;
+      }
+    }
+  }
 }
 
 // When each note was last edited, or null where AnkiConnect lacks
@@ -139,8 +198,9 @@ async function runSync() {
   }
   const ids = [...rulesByNote.keys()];
 
-  // A changed field list or Anki address invalidates every cached note.
-  const source = JSON.stringify([cfg.ankiUrl.trim(), [...cfg.fields].sort()]);
+  // A changed field list, field script or Anki address invalidates every cached note.
+  const script = cfg.fieldScript.trim();
+  const source = JSON.stringify([cfg.ankiUrl.trim(), [...cfg.fields].sort(), ...(script ? [script] : [])]);
   const mods = await modTimes(ids);
   // Without edit times, re-read everything once a day so edited notes catch up.
   const fresh = cfg.noteCache?.source === source && (mods || Date.now() - cfg.noteCache.fullAt < FULL_REREAD_MS);
@@ -153,9 +213,16 @@ async function runSync() {
     if (hit && (!mods || hit.mod === mods.get(id))) notes[id] = hit;
     else stale.push(id);
   }
-  for (const note of await notesInfo(stale)) {
-    notes[note.noteId] = { mod: mods?.get(note.noteId) ?? note.mod ?? 0, words: noteWords(note, cfg.fields) };
-  }
+  await withSandbox(async () => {
+    for await (const batch of noteBatches(stale)) {
+      const scripted = script ? await runFieldScript(script, batch) : [];
+      batch.forEach((note, i) => {
+        const r = scripted[i];
+        if (r?.error) throw new Error(`Field script failed on note ${note.noteId}: ${r.error}`);
+        notes[note.noteId] = { mod: mods?.get(note.noteId) ?? note.mod ?? 0, words: noteWords(note, cfg.fields, r?.words) };
+      });
+    }
+  });
 
   const dict = {};
   for (const id of ids) {
@@ -225,6 +292,22 @@ const handlers = {
       }
     }
     return out;
+  },
+  // Words of a few notes, to try the fields and the field script on.
+  async testFields({ baseQuery, rules, fields, fieldScript, search }) {
+    await connect();
+    const query = ruleQuery(unionQuery(baseQuery, rules), search);
+    if (!query) throw new Error("Add a base filter or a rule search first.");
+    const notes = await notesInfo((await anki("findNotes", { query })).slice(0, 5));
+    const script = fieldScript.trim();
+    const scripted = script ? await withSandbox(() => runFieldScript(script, notes)) : [];
+    return notes.map((note, i) => ({
+      noteId: note.noteId,
+      fieldWords: noteWords(note, fields),
+      scriptWords: scripted[i]?.words && [...new Set(scripted[i].words.flatMap((v) => AnkiMarkJP.extractWords(v)))],
+      returned: scripted[i]?.words,
+      error: scripted[i]?.error,
+    }));
   },
   sync: () => sync(),
   async browse({ nid }) {

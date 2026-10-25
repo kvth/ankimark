@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "AnkiMark",
-  "version": "0.5",
+  "version": "0.6",
   "description": "Highlights Japanese words on web pages that you already have notes for in an Anki deck (via AnkiConnect).",
   "permissions": [
     "storage",
     "unlimitedStorage",
     "alarms",
-    "activeTab"
+    "activeTab",
+    "offscreen"
   ],
   "host_permissions": [
     "http://127.0.0.1:8765/*",
@@ -19,6 +20,7 @@
     "scripts": [
       "japanese.js",
       "config.js",
+      "sandbox-host.js",
       "background.js"
     ]
   },
@@ -59,6 +61,14 @@
       "all_frames": true
     }
   ],
+  "sandbox": {
+    "pages": [
+      "sandbox.html"
+    ]
+  },
+  "content_security_policy": {
+    "sandbox": "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-eval';"
+  },
   "browser_specific_settings": {
     "gecko": {
       "id": "ankimark@kvth",

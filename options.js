@@ -13,9 +13,28 @@ const EXAMPLES = [
   { name: "Everything else", query: "", color: "#9a9aa3" },
 ];
 
+// Yomitan puts every dictionary's entry into one Glossary field; some list
+// the word's other spellings as "forms".
+const FORMS_EXAMPLE = `// Yomitan's Glossary field: add the spellings the dictionaries list as "forms".
+const html = note.fields.Glossary;
+if (!html) return [];
+const doc = new DOMParser().parseFromString(html, "text/html");
+const forms = [];
+// Jitendex: <li data-sc-content="forms"> holding a list (or a table) of spellings
+for (const el of doc.querySelectorAll('[data-sc-content="forms"] li, [data-sc-content="forms"] th')) {
+  forms.push(el.textContent);
+}
+// JMdict: <li><i>(forms)</i> 刺（★） | 棘（★） | トゲ</li>
+// (the cleaning drops the parentheses and splits at "|")
+for (const label of doc.querySelectorAll("li > i")) {
+  if (label.textContent === "(forms)") forms.push(label.parentElement.textContent);
+}
+return forms;
+`;
+
 // Settings that go into an export file (everything except the API key).
 const EXPORT_KEYS = [
-  "baseQuery", "rules", "fields", "style", "opacity", "conjugations", "kanaMinLen", "enabled", "excludedHosts",
+  "baseQuery", "rules", "fields", "fieldScript", "style", "opacity", "conjugations", "kanaMinLen", "enabled", "excludedHosts",
   "syncMinutes",
 ];
 
@@ -131,6 +150,41 @@ function addRule(r) {
   names[names.length - 1]?.focus();
 }
 
+async function testFields() {
+  const btn = $("testFields");
+  const box = $("testResults");
+  btn.disabled = true;
+  showError("");
+  try {
+    const results = await call("testFields", {
+      baseQuery: cfg.baseQuery, rules: cfg.rules, fields: cfg.fields, fieldScript: cfg.fieldScript,
+      search: $("testSearch").value,
+    });
+    const script = !!cfg.fieldScript.trim();
+    const words = (list) => (list?.length ? list.join("、") : "—");
+    const head = el("tr", {}, el("th", { textContent: "Note" }), el("th", { textContent: "From fields" }));
+    if (script) head.append(el("th", { textContent: "From script" }));
+    const table = el("table", { className: "test-results" }, head);
+    for (const r of results) {
+      const row = el("tr", {}, el("td", { textContent: r.noteId }), el("td", { textContent: words(r.fieldWords) }));
+      if (script) {
+        const td = el("td", { textContent: r.error ?? words(r.scriptWords) });
+        td.classList.toggle("bad", !!r.error);
+        // What the script returned, before cleaning.
+        if (r.returned) td.title = JSON.stringify(r.returned);
+        row.append(td);
+      }
+      table.append(row);
+    }
+    box.replaceChildren(results.length ? table : el("p", { className: "hint", textContent: "No notes found." }));
+  } catch (e) {
+    box.replaceChildren();
+    showError(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function renderFields(fields) {
   const box = $("fields");
   box.innerHTML = "";
@@ -204,6 +258,20 @@ async function init() {
     }
   });
 
+  $("fieldScript").value = cfg.fieldScript;
+  $("fieldScript").addEventListener("input", (e) => {
+    cfg.fieldScript = e.target.value;
+    save(["fieldScript"], 500);
+  });
+  $("exampleForms").addEventListener("click", () => {
+    const box = $("fieldScript");
+    if (box.value.trim() && box.value !== FORMS_EXAMPLE && !confirm("Replace the current field script?")) return;
+    box.value = FORMS_EXAMPLE;
+    box.dispatchEvent(new Event("input"));
+  });
+  $("testFields").addEventListener("click", testFields);
+  $("testSearch").addEventListener("keydown", (e) => e.key === "Enter" && testFields());
+
   // Display
   $("style").value = cfg.style;
   $("style").addEventListener("change", (e) => {
@@ -271,7 +339,7 @@ async function init() {
     showError("");
     try {
       clearTimeout(saveTimer);
-      await store.set({ baseQuery: cfg.baseQuery, rules: cfg.rules, fields: cfg.fields });
+      await store.set({ baseQuery: cfg.baseQuery, rules: cfg.rules, fields: cfg.fields, fieldScript: cfg.fieldScript });
       const info = await call("sync");
       $("staleText").textContent = `Synced ${info.words} words from ${info.notes} notes.`;
       setTimeout(updateStale, 2500);
@@ -321,6 +389,7 @@ function parseImport(data) {
 
   if (str(data.baseQuery)) out.baseQuery = data.baseQuery;
   if (strList(data.fields)) out.fields = data.fields;
+  if (str(data.fieldScript)) out.fieldScript = data.fieldScript;
   if (strList(data.excludedHosts)) out.excludedHosts = data.excludedHosts;
   if (["background", "underline"].includes(data.style)) out.style = data.style;
   if (Number.isFinite(data.opacity)) out.opacity = clamp(data.opacity, 10, 80);
@@ -367,7 +436,8 @@ async function importSettings(e) {
     await store.set(settings);
     const count = settings.rules?.length;
     const n = settings.rules ? ` (${count} rule${count === 1 ? "" : "s"})` : "";
-    sessionStorage.setItem("ankimark-import", `Imported settings from ${file.name}${n}.`);
+    const script = settings.fieldScript?.trim() ? " It includes a field script; check what it does before syncing." : "";
+    sessionStorage.setItem("ankimark-import", `Imported settings from ${file.name}${n}.${script}`);
     location.reload();
   } catch (err) {
     showError(`Import failed: ${err.message}`);

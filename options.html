@@ -51,6 +51,28 @@
     <p class="hint">Which note fields hold the Japanese word. With none ticked, each note's first field is used.</p>
     <div id="fields" class="fields"><span class="hint">Click “Load fields” to list the fields of your notes.</span></div>
     <div class="row"><button id="loadFields">Load fields</button></div>
+
+    <h3>Field script</h3>
+    <p class="hint">For words that a field holds among other things, such as the other spellings in a dictionary
+      entry: JavaScript that gets the note and returns a list of words. They're added to the fields' words
+      and cleaned the same way.
+      <code>note.fields</code> maps each field name to its HTML; there are also <code>note.modelName</code>,
+      <code>note.tags</code> and <code>note.noteId</code>. <code>DOMParser</code> works; network access doesn't.
+      Leave it empty for none.</p>
+    <div class="script">
+      <code>function (note) {</code>
+      <textarea id="fieldScript" spellcheck="false" rows="17" placeholder="return [note.fields.Word];"></textarea>
+      <code>}</code>
+    </div>
+    <div class="examples">
+      <span class="hint">Example:</span>
+      <button id="exampleForms" title="Adds the spellings Yomitan's dictionaries list under “forms” in the Glossary field">Yomitan forms</button>
+    </div>
+    <div class="row test-row">
+      <button id="testFields">Test</button>
+      <input type="text" id="testSearch" spellcheck="false" placeholder="on notes matching (optional Anki search, e.g. Expression:棘)">
+    </div>
+    <div id="testResults"></div>
   </section>
 
   <section>

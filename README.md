@@ -119,6 +119,30 @@ search, the base filter or the fields needs a sync; the popup and settings page 
 when that's the case. **Check searches** shows how many notes each rule matches and
 reports invalid searches.
 
+## Field script
+
+When a field holds the word among other things, a **field script** (*Rules & settings → Fields*)
+can pick it out: the body of a JavaScript function that gets the note and returns a list of
+words. These are added to the words from the fields and cleaned the same way (see below).
+
+```js
+// function (note) {
+const doc = new DOMParser().parseFromString(note.fields.Glossary ?? "", "text/html");
+return [...doc.querySelectorAll('[data-sc-content="forms"] li')].map((li) => li.textContent);
+// }
+```
+
+`note` is `{ noteId, modelName, tags, fields }`, with `fields` mapping each field name to its
+HTML. The **Yomitan forms** example adds the spellings that Yomitan's dictionaries (Jitendex,
+JMdict) list as "forms" in the Glossary field, so a note for とげ also marks 刺, 棘 and トゲ.
+**Test** shows the words from the fields and from the script for a few notes, optionally the
+ones matching an extra search.
+
+The script runs in a sandboxed frame (`sandbox.html`) without extension APIs or network
+access; in Chrome that frame sits in an offscreen document, because the background service
+worker has no DOM. If the script throws for a note, the sync stops and shows the error with
+the note id. Firefox supports such sandboxes from version 154.
+
 ## Backup
 
 The settings page can **export** your rules and settings to a JSON file and **import**
@@ -151,7 +175,9 @@ and leaves the rest alone. The Anki address and API key are never exported. Afte
 - `japanese.js`: field cleaning, conjugation rules and the word matcher (shared by all scripts)
 - `content.js` / `content.css`: highlighting in pages, including content added later
 - `popup.*`: page coverage, rule toggles, sync button, per-site switch
-- `options.*`: rules, base filter, fields and display settings
+- `options.*`: rules, base filter, fields, field script and display settings
+- `sandbox.*`: runs the field script; `sandbox-host.js` drives it from Firefox's background page
+  and from `offscreen.*` (Chrome)
 - `test/japanese.test.mjs`: matcher and conjugation tests (`node --test test/*.test.mjs`)
 - `test/harness.html` + `test/chrome-stub.js`: runs the content script with a stubbed
   `chrome` API (`python3 -m http.server` in this folder, then open `/test/harness.html`)

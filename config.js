@@ -22,6 +22,7 @@
     baseQuery: "",
     rules: DEFAULT_RULES,
     fields: [],
+    fieldScript: "", // JavaScript function body: note -> extra words
     apiKey: "",
     ankiUrl: "http://localhost:8765",
     syncMinutes: 5, // 0 = only on demand
@@ -52,8 +53,12 @@
   }
 
   // What a sync depends on; when this changes the word list is stale.
+  // (No field script leaves the signature as it was before scripts existed.)
   function syncSignature(cfg) {
-    return JSON.stringify([cfg.baseQuery.trim(), cfg.rules.map((r) => [r.id, r.query.trim()]), [...cfg.fields].sort()]);
+    const script = cfg.fieldScript.trim();
+    return JSON.stringify([
+      cfg.baseQuery.trim(), cfg.rules.map((r) => [r.id, r.query.trim()]), [...cfg.fields].sort(), ...(script ? [script] : []),
+    ]);
   }
 
   // Message the background. Firefox suspends an idle background page, and the
