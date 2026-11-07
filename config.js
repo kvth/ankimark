@@ -17,6 +17,7 @@
     excludedHosts: [],
     kanaMinLen: 2,
     conjugations: true,
+    kanaVariants: true, // ゴミ also matches ごみ and vice versa
     style: "background",
     opacity: 35,
     baseQuery: "",

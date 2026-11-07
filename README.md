@@ -163,6 +163,11 @@ and leaves the rest alone. The Anki address and API key are never exported. Afte
   highlighted, and `勉強した` also matches a note for the noun `勉強`. A form only counts
   when the result is a word in your notes, and a few checks keep ordinary kana from being
   read as verbs. The rules are written for AnkiMark (not copied from Yomitan).
+- *Match kana words in either script* (on by default) lets a note written only in kana match
+  the word in the other kana too: a note for `ゴミ` also marks `ごみ`, `とげ` marks `トゲ`, and
+  `ハマる` marks `はまった`. A note with the other spelling itself takes precedence. The
+  tooltip says "(other kana)". It can mark an unrelated word now and then (`まま` for a note
+  `ママ`); turn it off if that bothers you.
 - Kana-only words shorter than 2 characters are ignored by default (so `は`, `に` and
   similar particle-like notes don't flood the page). You can change this in the settings.
 - Text inside inputs, textareas, `code`/`pre` and editable areas is never changed.

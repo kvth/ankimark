@@ -10,7 +10,7 @@
   const MARK_CLASS = "ankimark";
   const CHUNK = 400;
   const WATCHED_KEYS = [
-    "dict", "enabled", "excludedHosts", "kanaMinLen", "conjugations", "style", "opacity", "rules",
+    "dict", "enabled", "excludedHosts", "kanaMinLen", "conjugations", "kanaVariants", "style", "opacity", "rules",
   ];
 
   let matcher = null;
@@ -64,7 +64,7 @@
       span.className = MARK_CLASS;
       span.dataset.rule = ruleId;
       span.dataset.nid = nid;
-      span.title = `${m.word}${m.inflected ? " (conjugated)" : ""} · ${ruleNames[ruleId]} · Alt+click to open in Anki`;
+      span.title = `${m.word}${m.variant ? " (other kana)" : ""}${m.inflected ? " (conjugated)" : ""} · ${ruleNames[ruleId]} · Alt+click to open in Anki`;
       span.textContent = text.slice(m.start, m.end);
       frag.appendChild(span);
       pos = m.end;
@@ -172,7 +172,9 @@
       }
       if (best) entries[word] = best;
     }
-    matcher = new Matcher(entries, { kanaMinLen: cfg.kanaMinLen, conjugations: cfg.conjugations });
+    matcher = new Matcher(entries, {
+      kanaMinLen: cfg.kanaMinLen, conjugations: cfg.conjugations, kanaVariants: cfg.kanaVariants,
+    });
     if (cfg.enabled && !cfg.excludedHosts.includes(host)) start();
   }
 

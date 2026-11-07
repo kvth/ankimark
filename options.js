@@ -34,7 +34,7 @@ return forms;
 
 // Settings that go into an export file (everything except the API key).
 const EXPORT_KEYS = [
-  "baseQuery", "rules", "fields", "fieldScript", "style", "opacity", "conjugations", "kanaMinLen", "enabled", "excludedHosts",
+  "baseQuery", "rules", "fields", "fieldScript", "style", "opacity", "conjugations", "kanaVariants", "kanaMinLen", "enabled", "excludedHosts",
   "syncMinutes",
 ];
 
@@ -291,6 +291,11 @@ async function init() {
     cfg.conjugations = e.target.checked;
     save(["conjugations"], 0);
   });
+  $("kanaVariants").checked = cfg.kanaVariants;
+  $("kanaVariants").addEventListener("change", (e) => {
+    cfg.kanaVariants = e.target.checked;
+    save(["kanaVariants"], 0);
+  });
   $("kanaMinLen").value = cfg.kanaMinLen;
   $("kanaMinLen").addEventListener("change", (e) => {
     cfg.kanaMinLen = Math.max(1, Math.min(10, parseInt(e.target.value, 10) || DEFAULTS.kanaMinLen));
@@ -395,6 +400,7 @@ function parseImport(data) {
   if (Number.isFinite(data.opacity)) out.opacity = clamp(data.opacity, 10, 80);
   if (Number.isFinite(data.kanaMinLen)) out.kanaMinLen = clamp(data.kanaMinLen, 1, 10);
   if (typeof data.conjugations === "boolean") out.conjugations = data.conjugations;
+  if (typeof data.kanaVariants === "boolean") out.kanaVariants = data.kanaVariants;
   if (typeof data.enabled === "boolean") out.enabled = data.enabled;
   if ([0, 1, 5, 15, 60].includes(data.syncMinutes)) out.syncMinutes = data.syncMinutes;
 

@@ -65,3 +65,25 @@ test("extractWords cleans Anki fields", () => {
   assert.deepEqual(extractWords("食べる、喰べる"), ["食べる", "喰べる"]);
   assert.deepEqual(extractWords("勉強（する）"), ["勉強"]);
 });
+
+test("kana words match in the other script too", () => {
+  assert.deepEqual(found("ごみを捨てた", ["ゴミ"]), ["ごみ=ゴミ"]);
+  assert.deepEqual(found("トゲが刺さった", ["とげ"]), ["トゲ=とげ"]);
+  assert.deepEqual(found("ゲームにはまった", ["ハマる"]), ["はまった=ハマる"]);
+  assert.deepEqual(found("ゴミ", ["ゴミ"], { kanaVariants: false }).length, 1);
+  assert.deepEqual(found("ごみ", ["ゴミ"], { kanaVariants: false }), []);
+  // kanji words get no variants
+  assert.deepEqual(found("たべる", ["食べる"]), []);
+});
+
+test("a note for the other spelling wins over the variant", () => {
+  const m = new Matcher({ ゴミ: "katakana", ごみ: "hiragana" });
+  assert.deepEqual(m.find("ごみ").map((x) => [x.word, x.entry, x.variant]), [["ごみ", "hiragana", false]]);
+  assert.deepEqual(m.find("ゴミ").map((x) => [x.word, x.entry, x.variant]), [["ゴミ", "katakana", false]]);
+  assert.equal(new Matcher({ ゴミ: 1 }).find("ごみ")[0].variant, true);
+  assert.equal(new Matcher({ ゴミ: 1, 日本: 2 }).size, 2);
+});
+
+test("variants respect the kana minimum length", () => {
+  assert.deepEqual(found("へ", ["ヘ"], { kanaMinLen: 2 }), []);
+});

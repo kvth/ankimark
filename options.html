@@ -88,6 +88,9 @@
     </label>
     <label class="check"><input type="checkbox" id="conjugations"> Match conjugated forms (食べなかった → 食べる)</label>
     <p class="hint">Finds verbs and adjectives in any form (past, negative, polite, て-form, passive, causative, potential, …) and highlights the whole word. Off: only words written exactly as in your notes.</p>
+    <label class="check"><input type="checkbox" id="kanaVariants"> Match kana words in either script (ゴミ ↔ ごみ)</label>
+    <p class="hint">A note written only in kana also matches the word in the other kana (ハマる also matches はまる).
+      A note with the other spelling itself takes precedence. Can mark the odd unrelated word, e.g. まま for a note ママ.</p>
     <label class="inline">Ignore kana-only words shorter than
       <input type="number" id="kanaMinLen" min="1" max="10"> characters</label>
   </section>
