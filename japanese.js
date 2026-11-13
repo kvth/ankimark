@@ -1,5 +1,6 @@
 // Shared Japanese text helpers. Loaded by the content script, by the
-// background service worker (importScripts) and by the node tests.
+// background service worker (importScripts) and by the node tests, each time
+// after yomitan-deinflect.js.
 (function (root) {
   "use strict";
 
@@ -48,162 +49,47 @@
 
   // ---- Conjugated forms -------------------------------------------------
   //
-  // deinflect() undoes Japanese verb and adjective endings step by step:
+  // deinflect() uses Yomitan's Japanese deinflection rules and engine
+  // (yomitan-deinflect.js, built from vendor/yomitan by scripts/update-yomitan.mjs):
   // 食べさせられなかった -> 食べさせられない -> 食べさせられる -> 食べさせる -> 食べる.
-  // Each rule turns an ending back into a simpler one. The word types stop
-  // nonsense chains: a rule only applies to a form of the type it produces
-  // (e.g. ない-forms behave like i-adjectives, so なかった -> ない works,
-  // but ない is never taken as the past of something).
+  // Each result says which word types it can be (v1, v5, adj-i, ...). Yomitan checks
+  // that against the part of speech of dictionary entries; Anki notes don't have one,
+  // so every result that can be some dictionary form counts.
 
-  const V1 = 1; // ichidan verb (食べる)
-  const V5 = 2; // godan verb (書く)
-  const VK = 4; // 来る
-  const VS = 8; // する verb
-  const ADJ = 16; // i-adjective, and forms that inflect like one (ない, たい)
-  const MASU = 32; // ます form
-  const TE = 64; // て form
-  const END = 128; // a form nothing else attaches to (past, ば, volitional, ...)
-  const BASE = 256; // a plain word, e.g. 勉強 from 勉強する
-  const ANY = 511;
+  const Yomitan = typeof module !== "undefined" && module.exports ? require("./yomitan-deinflect.js") : root.YomitanDeinflect;
 
-  // [ending, replacement, type of the ending's form, type of the result]
-  const RULES = [];
-  const rule = (from, to, fromType, toType) => RULES.push([from, to, fromType, toType]);
+  let transformer = null;
+  let dictionaryForms = 0; // condition flags of all dictionary forms
+  let suru = 0;
 
-  // Godan verbs, by final kana: a-, i-, e-, o-row, then the て and た forms.
-  const GODAN = [
-    ["う", "わ", "い", "え", "お", "って", "った"],
-    ["く", "か", "き", "け", "こ", "いて", "いた"],
-    ["ぐ", "が", "ぎ", "げ", "ご", "いで", "いだ"],
-    ["す", "さ", "し", "せ", "そ", "して", "した"],
-    ["つ", "た", "ち", "て", "と", "って", "った"],
-    ["ぬ", "な", "に", "ね", "の", "んで", "んだ"],
-    ["ぶ", "ば", "び", "べ", "ぼ", "んで", "んだ"],
-    ["む", "ま", "み", "め", "も", "んで", "んだ"],
-    ["る", "ら", "り", "れ", "ろ", "って", "った"],
-  ];
-  for (const [u, a, i, e, o, te, ta] of GODAN) {
-    rule(a + "ない", u, ADJ, V5); // 書かない
-    rule(a + "ず", u, END, V5);
-    rule(a + "れる", u, V1, V5); // passive 書かれる
-    rule(a + "せる", u, V1, V5); // causative 書かせる
-    rule(i + "ます", u, MASU, V5); // 書きます
-    rule(i + "たい", u, ADJ, V5); // 書きたい
-    rule(i + "ながら", u, END, V5);
-    rule(i + "すぎる", u, V1, V5);
-    rule(e + "る", u, V1, V5); // potential 書ける
-    rule(e + "ば", u, END, V5); // 書けば
-    rule(o + "う", u, END, V5); // volitional 書こう
-    rule(te, u, TE, V5); // 書いて
-    rule(ta, u, END, V5); // 書いた
-  }
-  // 行く is irregular in て/た
-  for (const k of ["行", "い"]) {
-    rule(k + "って", k + "く", TE, V5);
-    rule(k + "った", k + "く", END, V5);
+  function yomitan() {
+    if (!transformer) {
+      transformer = new Yomitan.LanguageTransformer();
+      transformer.addDescriptor(Yomitan.japaneseTransforms);
+      dictionaryForms = transformer.getConditionFlagsFromPartsOfSpeech(Object.keys(Yomitan.japaneseTransforms.conditions));
+      suru = transformer.getConditionFlagsFromConditionType("vs");
+    }
+    return transformer;
   }
 
-  // Ichidan verbs
-  for (const [from, type] of [
-    ["ない", ADJ], ["ず", END], ["ます", MASU], ["たい", ADJ], ["ながら", END], ["すぎる", V1],
-    ["られる", V1], ["させる", V1], ["れば", END], ["よう", END], ["て", TE], ["た", END],
-  ]) {
-    rule(from, "る", type, V1);
-  }
-
-  // する and 来る
-  for (const [from, type] of [
-    ["しない", ADJ], ["せず", END], ["します", MASU], ["したい", ADJ], ["しながら", END],
-    ["される", V1], ["させる", V1], ["できる", V1], ["すれば", END], ["しろ", END], ["しよう", END],
-    ["して", TE], ["した", END],
-  ]) {
-    rule(from, "する", type, VS);
-  }
-  rule("する", "", VS, BASE); // 勉強する -> 勉強
-  // 来る: the kanji stays 来, in kana the vowel changes (きた, こない, くれば)
-  for (const [ki, ko, ku, kuru] of [["来", "来", "来", "来る"], ["き", "こ", "く", "くる"]]) {
-    rule(ki + "ます", kuru, MASU, VK);
-    rule(ki + "たい", kuru, ADJ, VK);
-    rule(ki + "て", kuru, TE, VK);
-    rule(ki + "た", kuru, END, VK);
-    rule(ko + "ない", kuru, ADJ, VK);
-    rule(ko + "られる", kuru, V1, VK);
-    rule(ko + "させる", kuru, V1, VK);
-    rule(ko + "よう", kuru, END, VK);
-    rule(ku + "れば", kuru, END, VK);
-  }
-
-  // i-adjectives (and ない / たい forms, which inflect the same way)
-  for (const [from, type] of [
-    ["かった", END], ["くて", TE], ["く", END], ["ければ", END], ["くない", ADJ],
-    ["さ", BASE], ["そう", END], ["すぎる", V1],
-  ]) {
-    rule(from, "い", type, ADJ);
-  }
-  for (const [from, type] of [["よかった", END], ["よくて", TE], ["よく", END], ["よければ", END], ["よくない", ADJ]]) {
-    rule(from, "いい", type, ADJ);
-  }
-  rule("なきゃ", "ない", END, ADJ);
-  rule("なくちゃ", "ない", END, ADJ);
-
-  // ます forms
-  for (const [from, type] of [["ました", END], ["ません", END], ["ませんでした", END], ["ましょう", END], ["まして", TE]]) {
-    rule(from, "ます", type, MASU);
-  }
-
-  // Endings attached to the て form
-  for (const [te, de, type] of [
-    ["ている", "でいる", V1], ["てる", "でる", V1], ["ておく", "でおく", V5], ["とく", "どく", V5],
-    ["てしまう", "でしまう", V5], ["ちゃう", "じゃう", V5], ["てある", "である", V5],
-  ]) {
-    rule(te, "て", type, TE);
-    rule(de, "で", type, TE);
-  }
-  rule("たら", "た", END, END);
-  rule("だら", "だ", END, END);
-  rule("たり", "た", END, END);
-  rule("だり", "だ", END, END);
-
-  // An ichidan verb's stem ends in an i- or e-row kana or in kanji (食べる, 起きる, 見る).
-  const ICHIDAN_STEM_END = /[いきぎしじちぢにひびぴみりえけげせぜてでねへべぺめれ々〆㐀-䶿一-鿿]$/;
-
-  // Is `base`, made by a rule of result type `toType`, a plausible word?
-  function plausible(base, to, toType) {
-    if (toType === V1 && to === "る") return ICHIDAN_STEM_END.test(base.slice(0, -1));
-    if (toType === BASE) return base.length >= 2; // 勉強する -> 勉強, but not 登場する -> 場
-    if (toType === ADJ && to === "い") return base !== "いい"; // いい inflects as よかった, よく
-    return true;
-  }
-
-  const MAX_STEPS = 8;
   const deinflectCache = new Map();
 
   // Every dictionary form `text` could be an inflection of (not including text itself).
   function deinflect(text) {
     const cached = deinflectCache.get(text);
     if (cached) return cached;
-    const seen = new Map([[text, ANY]]);
-    let frontier = [[text, ANY]];
-    for (let step = 0; step < MAX_STEPS && frontier.length; step++) {
-      const next = [];
-      for (const [form, type] of frontier) {
-        for (const [from, to, fromType, toType] of RULES) {
-          if (!(type & fromType) || !form.endsWith(from)) continue;
-          const base = form.slice(0, form.length - from.length) + to;
-          if (!base || !plausible(base, to, toType)) continue;
-          const known = seen.get(base) ?? 0;
-          if ((known & toType) === toType) continue;
-          seen.set(base, known | toType);
-          next.push([base, toType]);
-        }
-      }
-      frontier = next;
+    const forms = new Set();
+    for (const { text: form, conditions } of yomitan().transform(text)) {
+      if (conditions & dictionaryForms) forms.add(form);
+      // Not in Yomitan: する verbs are noted as the noun (勉強した -> 勉強する -> 勉強).
+      // Single-kanji ones (愛する) are words of their own.
+      if ((conditions === 0 || conditions & suru) && form.endsWith("する") && form.length >= 4) forms.add(form.slice(0, -2));
     }
-    seen.delete(text);
-    const forms = [...seen.keys()];
+    forms.delete(text);
+    const result = [...forms];
     if (deinflectCache.size > 20000) deinflectCache.clear();
-    deinflectCache.set(text, forms);
-    return forms;
+    deinflectCache.set(text, result);
+    return result;
   }
 
   // ---- Matching ------------------------------------------------------------

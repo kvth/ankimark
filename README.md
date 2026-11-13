@@ -156,13 +156,15 @@ and leaves the rest alone. The Anki address and API key are never exported. Afte
   Lists like `食べる、喰べる` are split into separate words.
 - On the page, the longest known word at each position wins (`日本語` beats `日本`).
 - *Match conjugated forms* (on by default, can be turned off in the settings) undoes verb
-  and adjective endings step by step with a table of rules: 食べさせられなかった →
-  食べさせられない → 食べさせられる → 食べさせる → 食べる. It covers past, negative, polite,
-  て-form, たい, passive, causative, potential, volitional, ば, ている / ておく / てしまう /
-  ちゃう, i-adjectives, する and 来る, and chains of them. The whole inflected word is
-  highlighted, and `勉強した` also matches a note for the noun `勉強`. A form only counts
-  when the result is a word in your notes, and a few checks keep ordinary kana from being
-  read as verbs. The rules are written for AnkiMark (not copied from Yomitan).
+  and adjective endings step by step with [Yomitan](https://github.com/yomidevs/yomitan)'s
+  deinflection rules and engine: 食べさせられなかった → 食べさせられない → 食べさせられる →
+  食べさせる → 食べる. They cover past, negative, polite, て-form, たい, passive, causative,
+  potential, volitional, ば, ている / ておく / てしまう / ちゃう / ちまう, ず / ぬ / ん, なさい,
+  contractions like なきゃ, i-adjectives, irregular verbs and chains of them. The whole
+  inflected word is highlighted, and `勉強した` also matches a note for the noun `勉強` (an
+  AnkiMark addition; Yomitan stops at `勉強する`). A form only counts when the result is a
+  word in your notes; Yomitan also checks the result's part of speech, which Anki notes
+  don't have, so short kana-only notes are only matched as written (see below).
 - *Match kana words in either script* (on by default) lets a note written only in kana match
   the word in the other kana too: a note for `ゴミ` also marks `ごみ`, `とげ` marks `トゲ`, and
   `ハマる` marks `はまった`. A note with the other spelling itself takes precedence. The
@@ -177,7 +179,10 @@ and leaves the rest alone. The Anki address and API key are never exported. Afte
 - `manifest.json`: MV3 manifest
 - `background.js`: AnkiConnect calls, incremental sync, auto-sync
 - `config.js`: default rules and settings, search helpers (shared by all scripts)
-- `japanese.js`: field cleaning, conjugation rules and the word matcher (shared by all scripts)
+- `japanese.js`: field cleaning, conjugation lookup and the word matcher (shared by all scripts)
+- `yomitan-deinflect.js`: Yomitan's deinflection rules and engine as a classic script, generated
+  from the unchanged Yomitan files in `vendor/yomitan/` by `scripts/update-yomitan.mjs`.
+  To move to a newer Yomitan release: `make yomitan TAG=<release tag>`
 - `content.js` / `content.css`: highlighting in pages, including content added later
 - `popup.*`: page coverage, rule toggles, sync button, per-site switch
 - `options.*`: rules, base filter, fields, field script and display settings
@@ -189,4 +194,7 @@ and leaves the rest alone. The Anki address and API key are never exported. Afte
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+Copyright (C) 2026 Kevin Thomas
+
+GPL-3.0-or-later, see [LICENSE](LICENSE). `vendor/yomitan/` and `yomitan-deinflect.js` come from
+[Yomitan](https://github.com/yomidevs/yomitan) (GPL-3.0-or-later, Copyright (C) 2024-2026 Yomitan Authors).

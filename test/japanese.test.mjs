@@ -23,7 +23,10 @@ test("deinflects verbs, adjectives and chains back to the dictionary form", () =
     わかった: "わかる", 勉強した: "勉強する", 勉強しません: "勉強する", 勉強できる: "勉強する",
     来た: "来る", 来ない: "来る", 来ます: "来る", こなかった: "くる", きた: "くる",
     高かった: "高い", 高くて: "高い", 高くない: "高い", 高くなかった: "高い", 高ければ: "高い",
-    よかった: "いい", 行かなきゃ: "行く", 食べたら: "食べる", 読んだり: "読む",
+    // Yomitan gives よい, the form dictionaries list いい under.
+    よかった: "よい", 行かなきゃ: "行く", 食べたら: "食べる", 読んだり: "読む",
+    // Beyond the old hand-written rules
+    行っちまった: "行く", 食べなさい: "食べる", 知らん: "知る", 問うた: "問う", いらっしゃいます: "いらっしゃる",
   };
   for (const [form, base] of Object.entries(cases)) {
     assert.ok(deinflect(form).includes(base), `${form} -> ${base}, got ${deinflect(form).slice(0, 8)}`);

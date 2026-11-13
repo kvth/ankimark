@@ -1,6 +1,6 @@
 // Chrome runs this as a service worker; Firefox as a background page that
 // already loaded these via manifest background.scripts.
-if (typeof importScripts === "function") importScripts("japanese.js", "config.js");
+if (typeof importScripts === "function") importScripts("yomitan-deinflect.js", "japanese.js", "config.js");
 
 // Firefox has promise-based `browser`; Chrome only `chrome`.
 const ext = globalThis.browser ?? globalThis.chrome;

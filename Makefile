@@ -2,9 +2,10 @@
 -include .env
 export WEB_EXT_API_KEY WEB_EXT_API_SECRET
 
-IGNORE := --ignore-files test "test/**" Makefile .env
+# yomitan-deinflect.js is built from vendor/, so the package only needs the former
+IGNORE := --ignore-files test "test/**" Makefile .env vendor "vendor/**" scripts "scripts/**"
 
-.PHONY: build lint sign test clean
+.PHONY: build lint sign test clean yomitan
 
 # Package for AMO upload: web-ext-artifacts/ankimark-<version>.zip
 build:
@@ -19,6 +20,11 @@ sign:
 
 test:
 	node --test test/*.test.mjs
+
+# Re-vendor Yomitan's deinflection and rebuild yomitan-deinflect.js: make yomitan TAG=<release tag>
+TAG ?= 26.11.2.0
+yomitan:
+	node scripts/update-yomitan.mjs $(TAG)
 
 clean:
 	rm -rf web-ext-artifacts
