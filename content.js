@@ -199,22 +199,26 @@
   }
 
   // How much of the page's visible Japanese text is marked, in characters,
-  // in total and per rule. Hidden text (menus, collapsed sections) is left out.
+  // in total and per rule, and how many different words (notes) each rule
+  // marks. Hidden text (menus, collapsed sections) is left out.
   function pageStats() {
     const marks = {};
     const chars = {};
+    const notes = {}; // rule -> Set of note ids
     const unique = new Set();
     for (const span of document.querySelectorAll(`span.${MARK_CLASS}`)) {
       if (span.checkVisibility && !span.checkVisibility()) continue;
       const rule = span.dataset.rule;
       marks[rule] = (marks[rule] || 0) + 1;
       chars[rule] = (chars[rule] || 0) + countJapanese(span.textContent);
+      (notes[rule] ??= new Set()).add(span.dataset.nid);
       unique.add(span.dataset.nid);
     }
     return {
       active,
       marks,
       chars,
+      words: Object.fromEntries(Object.entries(notes).map(([rule, set]) => [rule, set.size])),
       total: countJapanese(document.body?.innerText ?? ""),
       unique: unique.size,
     };

@@ -31,7 +31,12 @@
     },
     tabs: {
       async query() { return [{ id: 1, url: "https://example.com/" }]; },
-      async sendMessage() { return { counts: { mature: 12, learning: 3, new: 1 }, unique: 14 }; },
+      async sendMessage() {
+        return {
+          active: true, total: 400, unique: 16,
+          marks: { mature: 30, learning: 5, new: 1 }, chars: { mature: 90, learning: 14, new: 2 }, words: { mature: 12, learning: 3, new: 1 },
+        };
+      },
     },
     runtime: {
       async sendMessage(m) {

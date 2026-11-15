@@ -101,13 +101,16 @@ function renderRules() {
     count.className = "hint";
     const chars = page?.chars?.[rule.id] ?? 0;
     if (chars && page.total) {
-      count.textContent = `${percent(chars / page.total)}`;
-      count.title = `${page.marks[rule.id]} words on this page`;
+      const words = page.words?.[rule.id];
+      count.textContent = words ? `${plural(words, "word")} · ${percent(chars / page.total)}` : percent(chars / page.total);
+      count.title = `Marked ${plural(page.marks[rule.id], "time")} on this page, ${percent(chars / page.total)} of its Japanese text`;
     }
     label.append(cb, sw, name, count);
     box.appendChild(label);
   }
 }
+
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 function percent(x) {
   const p = x * 100;
@@ -132,11 +135,12 @@ function renderCoverage() {
     const seg = document.createElement("i");
     seg.style.width = `${(chars / page.total) * 100}%`;
     seg.style.background = rule.color;
-    seg.title = `${rule.name}: ${percent(chars / page.total)}`;
+    const words = page.words?.[rule.id];
+    seg.title = `${rule.name}: ${words ? plural(words, "word") + ", " : ""}${percent(chars / page.total)}`;
     bar.appendChild(seg);
   }
   $("covPct").textContent = percent(known / page.total);
-  $("covText").textContent = `of the Japanese text on this page is marked (${page.unique} notes)`;
+  $("covText").textContent = `of the Japanese text on this page is marked · ${plural(page.unique, "word")}`;
 }
 
 async function showPageStats(tab) {

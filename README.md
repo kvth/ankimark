@@ -50,8 +50,11 @@ in the browser (Chrome: `chrome://extensions/shortcuts`; Firefox: *Manage Extens
 ## Page coverage
 
 The popup shows how much of the visible Japanese text on the current page is marked,
-counted in characters, as a percentage with a bar in the rule colours, and each rule's
-share next to it. Only enabled rules count, and hidden text (closed menus etc.) is left out.
+counted in characters, as a percentage with a bar in the rule colours, and how many different
+words that is. Next to each rule: its number of words and its share of the text
+(`Mature  42 words · 31%`). A word is counted once however often it appears, and counted by
+note, so 食べる and 食べた are one word. Only enabled rules count, and hidden text (closed menus,
+frames) is left out.
 
 ## Anki on another computer
 
