@@ -33,8 +33,8 @@ body {
   color: var(--fg);
 }
 body.popup { width: 300px; }
-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-h1 { font-size: 15px; margin: 0; }
+header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+h1 { font-size: 15px; margin: 0; flex: 1; }
 section { border-bottom: 1px solid var(--border); padding: 6px 0 10px; margin-bottom: 6px; }
 
 label, .label { display: block; font-weight: 600; margin: 8px 0 4px; }
@@ -83,3 +83,23 @@ body.popup > button { width: 100%; }
 .bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--border); }
 .bar i { display: block; height: 100%; }
 .row button { white-space: nowrap; flex: none; }
+
+/* On/off switch: a styled checkbox */
+input.switch {
+  appearance: none; flex: none; position: relative; margin: 0; cursor: pointer;
+  width: 34px; height: 20px; border-radius: 10px; background: var(--border); transition: background 0.15s;
+}
+input.switch::before {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.3); transition: transform 0.15s;
+}
+input.switch:checked { background: var(--accent); }
+input.switch:checked::before { transform: translateX(14px); }
+input.switch:disabled { opacity: 0.5; cursor: default; }
+input.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.site-row { display: flex; align-items: center; gap: 10px; margin: 4px 0; font-weight: normal; cursor: pointer; }
+.site-row b { word-break: break-all; }
+#siteHint { display: block; }
+#siteHint:empty { display: none; }
+body.off #coverage, body.off #rules { opacity: 0.5; }

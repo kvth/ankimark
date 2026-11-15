@@ -32,6 +32,21 @@ browser starts, and when you open the popup and the last sync is over a minute o
 only reads notes that are new or edited since the last one (via `notesModTime`; AnkiConnect
 Android lacks it, so there only new notes are read, plus everything once a day). The rule searches run every time, since cards change state with every review.
 
+## Turning it off
+
+Like an ad blocker, AnkiMark can be switched off everywhere or for single sites:
+
+- **Everywhere**: the switch at the top of the popup, or **Alt+Shift+A**.
+- **For the current site**: the *Highlight on …* switch in the popup, or **Alt+Shift+S**. Turning it on
+  again works the same way.
+
+Pages update right away, no reload needed. Where AnkiMark is off, its toolbar icon shows **off**.
+*Rules & settings → On / off* lists the sites it's off for, where you can remove them or add more
+(a site address or a whole page address). A site includes its subdomains: `example.com` also covers
+`www.example.com`. Frames take the setting of the page they're embedded in. The shortcuts can be changed
+in the browser (Chrome: `chrome://extensions/shortcuts`; Firefox: *Manage Extension Shortcuts* in
+`about:addons`, or *Change shortcuts* in the settings). Firefox for Android has no badge or shortcuts.
+
 ## Page coverage
 
 The popup shows how much of the visible Japanese text on the current page is marked,
@@ -177,18 +192,19 @@ and leaves the rest alone. The Anki address and API key are never exported. Afte
 ## Files
 
 - `manifest.json`: MV3 manifest
-- `background.js`: AnkiConnect calls, incremental sync, auto-sync
+- `background.js`: AnkiConnect calls, incremental sync, auto-sync, toolbar badge and keyboard shortcuts
 - `config.js`: default rules and settings, search helpers (shared by all scripts)
 - `japanese.js`: field cleaning, conjugation lookup and the word matcher (shared by all scripts)
 - `yomitan-deinflect.js`: Yomitan's deinflection rules and engine as a classic script, generated
   from the unchanged Yomitan files in `vendor/yomitan/` by `scripts/update-yomitan.mjs`.
   To move to a newer Yomitan release: `make yomitan TAG=<release tag>`
 - `content.js` / `content.css`: highlighting in pages, including content added later
-- `popup.*`: page coverage, rule toggles, sync button, per-site switch
-- `options.*`: rules, base filter, fields, field script and display settings
+- `popup.*`: on/off switches (everywhere and per site), page coverage, rule toggles, sync button
+- `options.*`: rules, base filter, fields, field script, display settings and the list of sites it's off for
 - `sandbox.*`: runs the field script; `sandbox-host.js` drives it from Firefox's background page
   and from `offscreen.*` (Chrome)
-- `test/japanese.test.mjs`: matcher and conjugation tests (`node --test test/*.test.mjs`)
+- `test/japanese.test.mjs`: matcher and conjugation tests; `test/config.test.mjs`: site matching
+  (`node --test test/*.test.mjs`)
 - `test/harness.html` + `test/chrome-stub.js`: runs the content script with a stubbed
   `chrome` API (`python3 -m http.server` in this folder, then open `/test/harness.html`)
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AnkiMark",
-  "version": "0.8",
+  "version": "0.9",
   "description": "Highlights Japanese words on web pages that you already have notes for in an Anki deck (via AnkiConnect).",
   "permissions": [
     "storage",
@@ -38,6 +38,20 @@
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true
+  },
+  "commands": {
+    "toggle-enabled": {
+      "suggested_key": {
+        "default": "Alt+Shift+A"
+      },
+      "description": "Turn AnkiMark on or off everywhere"
+    },
+    "toggle-site": {
+      "suggested_key": {
+        "default": "Alt+Shift+S"
+      },
+      "description": "Turn AnkiMark on or off for the current site"
+    }
   },
   "icons": {
     "16": "icons/icon16.png",

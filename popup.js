@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const ext = AnkiMarkConfig.ext;
 const store = ext.storage.local;
-const { loadConfig, syncSignature } = AnkiMarkConfig;
+const { loadConfig, syncSignature, hostOf, siteEntry, setSiteOff } = AnkiMarkConfig;
 
 async function call(type, params = {}) {
   const res = await AnkiMarkConfig.message({ type, ...params });
@@ -23,6 +23,7 @@ function timeAgo(t) {
 }
 
 let cfg;
+let host = ""; // the current tab's site, "" where AnkiMark can't run
 let page = null; // pageStats from the content script
 
 // Opening the popup syncs in the background when the last sync is older than this.
@@ -47,8 +48,33 @@ async function refreshState() {
   $("stale").textContent = noBase
     ? "No base filter set, so rules search your whole collection. Set your deck under Rules & settings."
     : "Searches changed since the last sync.";
+  renderToggles();
   renderRules();
   renderCoverage();
+}
+
+function renderToggles() {
+  const entry = siteEntry(host, cfg.excludedHosts);
+  $("enabled").checked = cfg.enabled;
+  $("siteOn").checked = !!host && !entry;
+  $("siteOn").disabled = !host || !cfg.enabled;
+  $("host").textContent = host || "this page";
+  $("siteHint").textContent = !cfg.enabled
+    ? "AnkiMark is off everywhere"
+    : !host
+      ? "AnkiMark doesn't run on this page"
+      : entry && entry !== host
+        ? `Off for all of ${entry}`
+        : "";
+  document.body.classList.toggle("off", !cfg.enabled);
+}
+
+// Show the keyboard shortcuts in the switches' tooltips.
+async function showShortcuts() {
+  const switches = { "toggle-enabled": $("enabled"), "toggle-site": $("siteOn") };
+  for (const { name, shortcut } of (await ext.commands?.getAll().catch(() => [])) ?? []) {
+    if (switches[name] && shortcut) switches[name].title += ` (${shortcut})`;
+  }
 }
 
 function renderRules() {
@@ -81,30 +107,6 @@ function renderRules() {
     label.append(cb, sw, name, count);
     box.appendChild(label);
   }
-}
-
-async function initSiteToggle() {
-  const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
-  let host = "";
-  try {
-    const url = new URL(tab?.url || "");
-    if (url.protocol.startsWith("http") || url.protocol === "file:") host = url.hostname;
-  } catch {}
-  const cb = $("siteOff");
-  if (!host) {
-    cb.disabled = true;
-    $("host").textContent = "this page";
-  } else {
-    $("host").textContent = host;
-    cb.checked = cfg.excludedHosts.includes(host);
-    cb.addEventListener("change", async () => {
-      const { excludedHosts } = await loadConfig(["excludedHosts"]);
-      const set = new Set(excludedHosts);
-      cb.checked ? set.add(host) : set.delete(host);
-      await store.set({ excludedHosts: [...set] });
-    });
-  }
-  return tab;
 }
 
 function percent(x) {
@@ -141,8 +143,9 @@ async function showPageStats(tab) {
   if (!tab?.id) return;
   try {
     page = await ext.tabs.sendMessage(tab.id, { type: "pageStats" }, { frameId: 0 });
+    const on = cfg.enabled && !siteEntry(host, cfg.excludedHosts);
     $("pageStats").textContent = !page.active
-      ? "Highlighting is off on this page"
+      ? on ? "Nothing to highlight yet" : ""
       : page.total
         ? ""
         : "No Japanese text on this page";
@@ -155,12 +158,14 @@ async function showPageStats(tab) {
 }
 
 async function init() {
+  const [tab] = await ext.tabs.query({ active: true, currentWindow: true });
+  host = hostOf(tab?.url ?? "");
   await refreshState();
-  const tab = await initSiteToggle();
   showPageStats(tab);
+  showShortcuts();
 
-  $("enabled").checked = cfg.enabled;
   $("enabled").addEventListener("change", (e) => store.set({ enabled: e.target.checked }));
+  $("siteOn").addEventListener("change", (e) => setSiteOff(host, !e.target.checked));
   $("settings").addEventListener("click", () => ext.runtime.openOptionsPage());
 
   async function runSync({ quiet = false } = {}) {

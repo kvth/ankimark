@@ -8,6 +8,7 @@
   <header>
     <h1>AnkiMark</h1>
     <span id="conn" class="pill">…</span>
+    <input type="checkbox" id="enabled" class="switch" title="Turn AnkiMark on or off everywhere">
   </header>
 
   <div id="access" class="notice" hidden>
@@ -16,6 +17,14 @@
   </div>
   <p id="error" class="error" hidden></p>
   <p id="stale" class="notice" hidden>Searches changed since the last sync.</p>
+
+  <section class="site">
+    <label class="site-row">
+      <span class="grow">Highlight on <b id="host">this site</b><span id="siteHint" class="hint"></span></span>
+      <input type="checkbox" id="siteOn" class="switch" title="Turn AnkiMark on or off for this site">
+    </label>
+    <div id="pageStats" class="hint"></div>
+  </section>
 
   <section id="coverage" hidden>
     <div class="cov-head"><b id="covPct"></b><span id="covText" class="hint"></span></div>
@@ -28,12 +37,6 @@
       <button id="sync" class="primary">Sync from Anki</button>
       <span id="syncInfo" class="hint"></span>
     </div>
-  </section>
-
-  <section>
-    <label class="check"><input type="checkbox" id="enabled"> Highlight on all pages</label>
-    <label class="check"><input type="checkbox" id="siteOff"> Disable on <b id="host">this site</b></label>
-    <div id="pageStats" class="hint"></div>
   </section>
 
   <button id="settings">Rules &amp; settings…</button>

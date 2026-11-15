@@ -1,7 +1,7 @@
 const $ = (id) => document.getElementById(id);
 const ext = AnkiMarkConfig.ext;
 const store = ext.storage.local;
-const { DEFAULTS, DEFAULT_RULES, loadConfig, deckQuery, syncSignature, newRuleId } = AnkiMarkConfig;
+const { DEFAULTS, DEFAULT_RULES, loadConfig, deckQuery, syncSignature, newRuleId, parseHost } = AnkiMarkConfig;
 
 const EXAMPLES = [
   { name: "Leech", query: "prop:lapses>=8", color: "#e5484d" },
@@ -200,6 +200,44 @@ function renderFields(fields) {
   if (!box.children.length) box.append(el("span", { className: "hint", textContent: "No notes found." }));
 }
 
+function renderSites() {
+  $("enabled").checked = cfg.enabled;
+  $("sites").replaceChildren(
+    ...[...cfg.excludedHosts].sort().map((host) => {
+      const del = el("button", { className: "del", textContent: "✕", title: `Turn AnkiMark on again for ${host}` });
+      del.addEventListener("click", () => store.set({ excludedHosts: cfg.excludedHosts.filter((h) => h !== host) }));
+      return el("li", {}, el("span", { textContent: host }), del);
+    })
+  );
+}
+
+function addSite() {
+  const input = $("siteInput");
+  const host = parseHost(input.value);
+  if (!host) {
+    if (input.value.trim()) showError(`"${input.value.trim()}" is not a site address.`);
+    return;
+  }
+  showError("");
+  input.value = "";
+  if (!cfg.excludedHosts.includes(host)) store.set({ excludedHosts: [...cfg.excludedHosts, host] });
+}
+
+async function showShortcuts() {
+  if (!ext.commands) return; // Firefox for Android
+  const names = { "toggle-enabled": "on/off everywhere", "toggle-site": "on/off for the current site" };
+  const list = (await ext.commands.getAll()).filter((c) => names[c.name]);
+  $("shortcuts").textContent =
+    "Keyboard shortcuts: " + list.map((c) => `${c.shortcut || "(none)"} ${names[c.name]}`).join(" · ");
+  $("shortcutBox").hidden = false;
+}
+
+function editShortcuts() {
+  // Firefox has an API for its shortcut page; Chrome's is a chrome:// page.
+  if (ext.commands.openShortcutSettings) ext.commands.openShortcutSettings();
+  else ext.tabs.create({ url: "chrome://extensions/shortcuts" });
+}
+
 async function checkRules() {
   showError("");
   try {
@@ -303,6 +341,20 @@ async function init() {
     save(["kanaMinLen"], 0);
   });
 
+  // On / off (the popup and the keyboard shortcuts change these too)
+  renderSites();
+  $("enabled").addEventListener("change", (e) => store.set({ enabled: e.target.checked }));
+  $("addSite").addEventListener("click", addSite);
+  $("siteInput").addEventListener("keydown", (e) => e.key === "Enter" && addSite());
+  $("editShortcuts").addEventListener("click", editShortcuts);
+  showShortcuts();
+  ext.storage.onChanged.addListener((changes, area) => {
+    if (area !== "local" || !("enabled" in changes || "excludedHosts" in changes)) return;
+    if ("enabled" in changes) cfg.enabled = changes.enabled.newValue ?? DEFAULTS.enabled;
+    if ("excludedHosts" in changes) cfg.excludedHosts = changes.excludedHosts.newValue ?? [];
+    renderSites();
+  });
+
   // AnkiConnect
   $("ankiUrl").value = cfg.ankiUrl;
   $("ankiUrl").addEventListener("change", async (e) => {
@@ -395,7 +447,7 @@ function parseImport(data) {
   if (str(data.baseQuery)) out.baseQuery = data.baseQuery;
   if (strList(data.fields)) out.fields = data.fields;
   if (str(data.fieldScript)) out.fieldScript = data.fieldScript;
-  if (strList(data.excludedHosts)) out.excludedHosts = data.excludedHosts;
+  if (strList(data.excludedHosts)) out.excludedHosts = [...new Set(data.excludedHosts.map(parseHost).filter(Boolean))];
   if (["background", "underline"].includes(data.style)) out.style = data.style;
   if (Number.isFinite(data.opacity)) out.opacity = clamp(data.opacity, 10, 80);
   if (Number.isFinite(data.kanaMinLen)) out.kanaMinLen = clamp(data.kanaMinLen, 1, 10);

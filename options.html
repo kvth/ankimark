@@ -96,6 +96,23 @@
   </section>
 
   <section>
+    <h2>On / off</h2>
+    <label class="check"><input type="checkbox" id="enabled"> Highlight words on web pages</label>
+    <p class="hint">Also a switch in the popup. When it's on, AnkiMark can still be off for single sites:</p>
+    <ul id="sites" class="sites"></ul>
+    <div class="row test-row">
+      <input type="text" id="siteInput" spellcheck="false" placeholder="example.com or a page address">
+      <button id="addSite">Turn off for this site</button>
+    </div>
+    <p class="hint">A site includes its subdomains: <code>example.com</code> also covers <code>www.example.com</code>.
+      The popup's switch turns AnkiMark off or on for the site you're on.</p>
+    <div id="shortcutBox" class="row" hidden>
+      <span id="shortcuts" class="hint grow"></span>
+      <button id="editShortcuts">Change shortcuts</button>
+    </div>
+  </section>
+
+  <section>
     <h2>AnkiConnect</h2>
     <label for="ankiUrl">Address</label>
     <input type="text" id="ankiUrl" spellcheck="false" placeholder="http://localhost:8765">

@@ -5,7 +5,8 @@ if (typeof importScripts === "function") importScripts("yomitan-deinflect.js", "
 // Firefox has promise-based `browser`; Chrome only `chrome`.
 const ext = globalThis.browser ?? globalThis.chrome;
 
-const { loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature, DEFAULTS } = AnkiMarkConfig;
+const { loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature, hostOf, siteEntry, setSiteOff, DEFAULTS } =
+  AnkiMarkConfig;
 
 // One request at a time: AnkiConnect Android hands each straight to AnkiDroid,
 // and the popup, the settings page and a sync can all ask at once.
@@ -310,16 +311,20 @@ const handlers = {
     }));
   },
   sync: () => sync(),
+  // The site of the tab a frame is in (frames can't always read the top page's address).
+  async tabHost(_msg, sender) {
+    return hostOf(sender.tab?.url ?? "");
+  },
   async browse({ nid }) {
     await anki("guiBrowse", { query: `nid:${nid}` });
     return true;
   },
 };
 
-ext.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+ext.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const h = handlers[msg?.type];
   if (!h) return false;
-  keepAlive(h(msg))
+  keepAlive(h(msg, sender))
     .then((result) => sendResponse({ ok: true, result }))
     .catch((e) => sendResponse({ ok: false, error: String(e.message || e) }));
   return true;
@@ -331,8 +336,53 @@ async function scheduleResync() {
   if (syncMinutes > 0) ext.alarms.create("resync", { periodInMinutes: syncMinutes });
 }
 
+// ---- On / off --------------------------------------------------------------
+//
+// Like an ad blocker: the toolbar icon shows "off" on tabs where AnkiMark is
+// switched off (everywhere, or for that site), and keyboard shortcuts toggle it.
+
+// Badges may be missing (Firefox for Android) and fail for tabs that just closed.
+function action(method, details) {
+  try {
+    ext.action[method]?.(details)?.catch(() => {});
+  } catch {}
+}
+
+async function updateBadges(tabs) {
+  const cfg = await loadConfig(["enabled", "excludedHosts"]);
+  tabs ??= await ext.tabs.query({});
+  action("setBadgeBackgroundColor", { color: "#6b6b70" });
+  for (const tab of tabs) {
+    const site = siteEntry(hostOf(tab.url ?? ""), cfg.excludedHosts);
+    action("setBadgeText", { tabId: tab.id, text: !cfg.enabled || site ? "off" : "" });
+    action("setTitle", { tabId: tab.id, title: !cfg.enabled ? "AnkiMark (off)" : site ? `AnkiMark (off on ${site})` : "AnkiMark" });
+  }
+}
+
+// Firefox resets per-tab badges when a page loads, so set them again then.
+ext.tabs.onUpdated.addListener((_id, change, tab) => {
+  if (change.url || change.status === "complete") updateBadges([tab]);
+});
+
+const commands = {
+  "toggle-enabled": async () => {
+    const { enabled } = await loadConfig(["enabled"]);
+    await ext.storage.local.set({ enabled: !enabled });
+  },
+  "toggle-site": async () => {
+    const [tab] = await ext.tabs.query({ active: true, lastFocusedWindow: true });
+    const host = hostOf(tab?.url ?? "");
+    if (!host) return;
+    const { excludedHosts } = await loadConfig(["excludedHosts"]);
+    await setSiteOff(host, !siteEntry(host, excludedHosts));
+  },
+};
+// No commands API on Firefox for Android.
+ext.commands?.onCommand.addListener((name) => commands[name]?.());
+
 ext.storage.onChanged.addListener((changes, area) => {
   if (area !== "local") return;
+  if ("enabled" in changes || "excludedHosts" in changes) updateBadges();
   if ("syncMinutes" in changes) scheduleResync();
   // Another address may be desktop Anki again.
   if ("ankiUrl" in changes) ankiConnectAndroid = false;
@@ -350,9 +400,11 @@ async function migrate() {
 ext.runtime.onInstalled.addListener(() => {
   scheduleResync();
   migrate();
+  updateBadges();
 });
 ext.runtime.onStartup.addListener(() => {
   scheduleResync();
+  updateBadges();
   sync().catch(() => {});
 });
 ext.alarms.onAlarm.addListener((alarm) => {

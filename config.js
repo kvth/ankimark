@@ -76,10 +76,45 @@
     }
   }
 
+  // Host of a page AnkiMark can run on, else "".
+  function hostOf(url) {
+    try {
+      const u = new URL(url);
+      return /^https?:$/.test(u.protocol) ? u.hostname : "";
+    } catch {
+      return "";
+    }
+  }
+
+  // A typed site ("https://Example.com/page", "*.example.com") as a host, or null.
+  function parseHost(input) {
+    let s = String(input).trim().toLowerCase().replace(/^\*\./, "");
+    if (!s) return null;
+    if (!/^[a-z][a-z\d+.-]*:\/\//.test(s)) s = "http://" + s;
+    return hostOf(s) || null;
+  }
+
+  const covers = (entry, host) => host === entry || host.endsWith("." + entry);
+
+  // The excludedHosts entry that turns AnkiMark off on `host`: the host
+  // itself or a parent domain (example.com also covers www.example.com).
+  function siteEntry(host, excludedHosts) {
+    return (host && excludedHosts.find((h) => covers(h, host))) || null;
+  }
+
+  // Turns AnkiMark off or on for `host`. Turning it on drops every entry that
+  // covers the host, parent domains included.
+  async function setSiteOff(host, off) {
+    const { excludedHosts } = await loadConfig(["excludedHosts"]);
+    const list = off ? [...new Set([...excludedHosts, host])] : excludedHosts.filter((h) => !covers(h, host));
+    await ext.storage.local.set({ excludedHosts: list });
+  }
+
   const isColor = (c) => /^#[0-9a-f]{6}$/i.test(c);
   const newRuleId = () => "r" + Math.random().toString(36).slice(2, 8);
 
   root.AnkiMarkConfig = {
-    ext, DEFAULT_RULES, DEFAULTS, loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature, message, isColor, newRuleId,
+    ext, DEFAULT_RULES, DEFAULTS, loadConfig, deckQuery, ruleQuery, unionQuery, syncSignature, message,
+    hostOf, parseHost, siteEntry, setSiteOff, isColor, newRuleId,
   };
 })(globalThis);

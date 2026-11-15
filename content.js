@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const { JP_CHAR, Matcher } = globalThis.AnkiMarkJP;
-  const { ext, loadConfig, isColor, message } = globalThis.AnkiMarkConfig;
+  const { ext, loadConfig, isColor, message, siteEntry } = globalThis.AnkiMarkConfig;
 
   const SKIP_TAGS = new Set([
     "SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "INPUT", "SELECT", "OPTION",
@@ -20,7 +20,20 @@
   let pending = new Set();
   let pendingTimer = 0;
 
-  const host = location.hostname;
+  // The site a frame belongs to is the top page's, so turning AnkiMark off
+  // for a site also covers the frames embedded in it.
+  let siteHost = null;
+  async function getSiteHost() {
+    if (siteHost !== null) return siteHost;
+    if (window === window.top) return (siteHost = location.hostname);
+    try {
+      return (siteHost = window.top.location.hostname);
+    } catch {} // cross-origin
+    const ancestors = location.ancestorOrigins; // not in Firefox
+    if (ancestors?.length) return (siteHost = new URL(ancestors[ancestors.length - 1]).hostname);
+    const res = await message({ type: "tabHost" }).catch(() => null);
+    return (siteHost = res?.ok && res.result ? res.result : location.hostname);
+  }
 
   function shouldSkip(el) {
     for (let e = el; e && e !== document.body; e = e.parentElement) {
@@ -157,6 +170,7 @@
 
   async function refresh() {
     const cfg = await loadConfig(WATCHED_KEYS);
+    const off = !cfg.enabled || (cfg.excludedHosts.length > 0 && !!siteEntry(await getSiteHost(), cfg.excludedHosts));
     stop();
     const rules = cfg.rules.filter((r) => r.enabled);
     ruleNames = Object.fromEntries(rules.map((r) => [r.id, r.name]));
@@ -175,7 +189,7 @@
     matcher = new Matcher(entries, {
       kanaMinLen: cfg.kanaMinLen, conjugations: cfg.conjugations, kanaVariants: cfg.kanaVariants,
     });
-    if (cfg.enabled && !cfg.excludedHosts.includes(host)) start();
+    if (!off) start();
   }
 
   function countJapanese(text) {

@@ -82,3 +82,9 @@ input[type="range"] { width: 160px; }
   .rule .result { grid-column: 3 / -1; }
 }
 input#notesBatch { width: 80px; }
+
+.sites { list-style: none; margin: 4px 0 0; padding: 0; }
+.sites li { display: flex; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--border); }
+.sites li span { flex: 1; font-family: ui-monospace, monospace; font-size: 13px; word-break: break-all; }
+.sites .del { padding: 0 6px; font-size: 14px; border-color: transparent; color: var(--muted); }
+.sites:empty { display: none; }
